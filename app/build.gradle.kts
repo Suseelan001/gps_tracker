@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.crmmainproject"
+    namespace = "com.locationReminder"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.crmmainproject"
+        applicationId = "com.locationReminder"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -88,6 +88,25 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
 
+
+    // Google Maps and Location
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.maps)
+    implementation(libs.play.services.location)
+    implementation(libs.places)
+
+    // Material Design
+    implementation(libs.material)
+
+    // Room Database
+    implementation(libs.androidx.room.runtime)
+    kapt("androidx.room:room-compiler:2.7.1")
+    implementation(libs.androidx.room.ktx)
+
+
+    implementation(libs.androidx.runtime.livedata)
+
+    implementation (libs.androidx.lifecycle.process)
 
 
 

@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "crmmainproject"
+rootProject.name = "Location Reminder"
 include(":app")
  
