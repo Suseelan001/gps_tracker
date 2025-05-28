@@ -66,6 +66,9 @@ fun MarkerListScreen(
     sharedPreferenceVM: SharedPreferenceVM
 ) {
 
+    LaunchedEffect(Unit) {
+        addLocationViewModel.getMarkerList()
+    }
     val getAccountList by addLocationViewModel.getAllRecord().observeAsState(emptyList())
     val markerList = getAccountList.filter { it.entryType.equals("Marker", ignoreCase = true) }
 
@@ -147,7 +150,13 @@ fun MarkerListScreen(
                 actions = {
                     if (isSelectionMode) {
                         IconButton(onClick = {
-                            selectedItems.forEach { addLocationViewModel.deleteItem(it) }
+
+
+                            selectedItems.forEach {
+                                addLocationViewModel.deleteMarker("eq.${it.id}")
+
+                              addLocationViewModel.deleteItem(it)
+                            }
                             selectedItems.clear()
                         }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete", tint = topBarTextColor)
@@ -240,7 +249,7 @@ fun MarkerListScreen(
                         state = listState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(bottom = 16.dp)
+                            .padding(bottom = 1.dp)
                     ) {
                         items(markerList) { item ->
                             val isSelected = selectedItems.contains(item)
@@ -365,6 +374,7 @@ fun MarkerListScreen(
 
         }
         }
+
     }
 
 

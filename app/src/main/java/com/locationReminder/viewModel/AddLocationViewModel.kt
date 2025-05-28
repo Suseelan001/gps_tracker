@@ -151,4 +151,24 @@ class AddLocationViewModel @Inject constructor(
         }
     }
 
+
+
+    fun deleteMarker(id: String) = viewModelScope.launch {
+        _loading.postValue(true)
+        when (val result = baseNetworkCall.deleteMarker(id)) {
+            is NetworkResult.Success -> {
+                _loading.postValue(false)
+            }
+
+            is NetworkResult.Error -> {
+                _errorMessage.postValue(result.message ?: "Something went wrong")
+                _loading.postValue(false)
+            }
+
+            is NetworkResult.Loading -> {
+                _loading.postValue(true)
+            }
+        }
+    }
+
 }

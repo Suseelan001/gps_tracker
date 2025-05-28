@@ -14,29 +14,38 @@ import android.telephony.SmsManager
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
-import com.google.gson.Gson
 import com.locationReminder.MainActivity
 import com.locationReminder.roomDatabase.dao.LocationDAO
 import com.locationReminder.R
 import com.locationReminder.model.localStorage.MySharedPreference
 import com.locationReminder.roomDatabase.dao.ContactDAO
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import java.text.SimpleDateFormat
+import java.util.*
 
 
 class AlarmHelper @Inject constructor(
-    private val context: Context,
+    @ApplicationContext private val context: Context,
     private val locationDAO: LocationDAO,
     private val contactDAO: ContactDAO,
     private val mySharedPreference: MySharedPreference
+)
 
-) {
-    private var currentLocationId: Int? = null
+{
 
 
     companion object {
+
+
+        private var currentLocationId: Int? = null
+        private var ringtone: Ringtone? = null
+        private var vibrator: Vibrator? = null
+        private var alarmIntent: PendingIntent? = null
+
         private var instance: AlarmHelper? = null
         private const val NOTIFICATION_ID = 1001
 
@@ -47,14 +56,16 @@ class AlarmHelper @Inject constructor(
             return instance!!
         }
 
-        private var ringtone: Ringtone? = null
-        private var vibrator: Vibrator? = null
+
     }
 
-    private var alarmIntent: PendingIntent? = null
 
     @RequiresApi(Build.VERSION_CODES.O)
-    fun playAlarm(locationId: Int) {
+    fun playAlarm(locationId: Int,address: String) {
+        currentLocationId?.let {
+            if (it == locationId) return
+            else stopAlarm(it)
+        }
 
         currentLocationId?.let {
             if (it != locationId) {
@@ -71,7 +82,6 @@ class AlarmHelper @Inject constructor(
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                 .build()
-            isLooping = true
             play()
         }
 
@@ -83,11 +93,9 @@ class AlarmHelper @Inject constructor(
             }
         }
 
-        println("CHECK_TAG_sendNotification " + location.sendNotification)
 
         if (location.sendNotification) {
-            println("CHECK_TAG_SEND_NOTIFICATION")
-            sendSmsToAllContacts(mySharedPreference,contactDAO)
+            sendSmsToAllContacts(mySharedPreference,contactDAO,address)
         }
 
         val fullScreenIntent = Intent(context, AlarmActivity::class.java).apply {
@@ -218,14 +226,16 @@ class AlarmHelper @Inject constructor(
         notificationManager.notify(NOTIFICATION_ID, notification)
     } }
 
-fun sendSmsToAllContacts( mySharedPreference: MySharedPreference,contactDAO: ContactDAO) {
+fun sendSmsToAllContacts(mySharedPreference: MySharedPreference, contactDAO: ContactDAO,address: String) {
     CoroutineScope(Dispatchers.IO).launch {
         val contacts = contactDAO.getAllContacts()
         val smsManager = SmsManager.getDefault()
 
+        val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+        val currentTime = timeFormat.format(Date())
 
         contacts.forEach { contact ->
-            val message = "Hi ${mySharedPreference.getUserName()}, ${contact.name} has just crossed the predefined location boundary at [Address] at [Time]. If this movement is unexpected or unauthorized, we recommend immediate action"
+            val message = "Hi ${contact.name}, ${mySharedPreference.getUserName()} has just crossed the predefined location boundary at $address at $currentTime.\n If this movement is unexpected or unauthorized, we recommend immediate action"
 
             try {
                 val parts = smsManager.divideMessage(message)

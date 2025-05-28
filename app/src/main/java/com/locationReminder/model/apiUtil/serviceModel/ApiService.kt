@@ -6,8 +6,10 @@ import com.locationReminder.viewModel.UserDetailResponseModel
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 interface ApiService {
 
@@ -34,6 +36,7 @@ interface ApiService {
     suspend fun getMarkerList(): Response<List<LocationDetail>>
 
 
-
+    @DELETE("marker_list")
+    suspend fun deleteMarker(@Query("id") filter: String): Response<ResponseBody>
 
 }

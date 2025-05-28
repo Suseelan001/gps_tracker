@@ -207,7 +207,7 @@ fun OnExitListScreen(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(bottom = 16.dp)
+                        .padding(bottom = 1.dp)
                 ) {
                     items(exitList) { item ->
                         val isSelected = selectedItems.contains(item)

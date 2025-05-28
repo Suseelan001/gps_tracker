@@ -52,4 +52,12 @@ class BaseNetworkSyncClass @Inject constructor(
         }
     }
 
+    suspend fun deleteMarker(id: String): NetworkResult<ResponseBody> {
+        return withContext(Dispatchers.Default) {
+            safeApiCall {
+                apiService.deleteMarker(id)
+            }
+        }
+    }
+
 }

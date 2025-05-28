@@ -64,7 +64,6 @@ class AlarmActivity : ComponentActivity() {
 
 
         alarmHelper = AlarmHelper.getInstance(this,locationDAO,contactDAO,sharedPreference)
-        locationId?.let { alarmHelper.playAlarm(it) }
 
         leftCircle = findViewById(R.id.leftCircle)
         rightCircle = findViewById(R.id.rightCircle)

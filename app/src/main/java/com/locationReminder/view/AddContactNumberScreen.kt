@@ -99,7 +99,7 @@ fun AddContactNumberScreen(
 
         if (!hasLoadedInitially) {
             showContactList = false
-            delay(1000)
+            delay(500)
             showContactList = true
             hasLoadedInitially = true
         } else {

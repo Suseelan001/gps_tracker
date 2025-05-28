@@ -175,7 +175,7 @@ fun OnEntryListScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 80.dp)
+                    .padding(bottom = 1.dp)
             ) {
 
 

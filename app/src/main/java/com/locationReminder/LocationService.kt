@@ -28,8 +28,14 @@ import com.locationReminder.roomDatabase.dao.LocationDAO
 import dagger.hilt.android.EntryPointAccessors
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.google.android.gms.maps.model.LatLng
 import com.locationReminder.alarmModel.AlarmActivity
 import com.locationReminder.alarmModel.AlarmHelper
+import com.locationReminder.view.getAddressFromLatLng
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -115,9 +121,8 @@ class LocationService : Service() {
                     )
                     val distance = distanceResult[0]
 
-                    Toast.makeText(this@LocationService, currentLocation.latitude.toString() +"  " + currentLocation.longitude.toString() + " distance " + distance, Toast.LENGTH_SHORT).show()
                     val isInsideGeofence = distance <= monitoredLoc.radius
-                    handleLocationTransition(monitoredLoc, isInsideGeofence)
+                    handleLocationTransition(monitoredLoc, isInsideGeofence , currentLocation.latitude, currentLocation.longitude )
                 }
             }
         }
@@ -130,7 +135,6 @@ class LocationService : Service() {
                 it.currentStatus == true &&
                         (it.entryType == "Entry" || it.entryType == "Exit")
             }
-
             if (monitoredLocations.isEmpty()) {
                 stopLocationUpdates()
             } else if (!isLocationUpdatesStarted) {
@@ -147,8 +151,7 @@ class LocationService : Service() {
         isLocationUpdatesStarted = false
     }
 
-
-    private fun handleLocationTransition(locationDetail: LocationDetail, isInside: Boolean) {
+    fun handleLocationTransition(locationDetail: LocationDetail, isInside: Boolean, currentLatitude: Double, currentLongitude: Double) {
         val id = locationDetail.id.toString()
         val wasInside = locationStates[id] == true
         val locationType = locationDetail.entryType
@@ -159,14 +162,69 @@ class LocationService : Service() {
         when {
             locationType == "Entry" && !wasInside && isInside -> {
                 delayedExitStates[id] = false
-              triggerAlarm(locationDetail.id)
                 locationStates[id] = true
+                CoroutineScope(Dispatchers.IO).launch {
+                    val addr = getAddressFromLatLng(
+                        this@LocationService,
+                        LatLng(currentLatitude, currentLongitude)
+                    )
+
+                    if (locationDetail.id != -1) {
+                        val entryPoint = EntryPointAccessors.fromApplication(
+                            this@LocationService.applicationContext,
+                            LocationDaoEntryPoint::class.java
+                        )
+                        val locationDao = entryPoint.locationDao()
+                        val contactDAO = entryPoint.contactDAO()
+                        val sharedPreference = entryPoint.mySharedPreference()
+
+                        AlarmHelper
+                            .getInstance(this@LocationService, locationDao, contactDAO, sharedPreference)
+                            .playAlarm(locationDetail.id, addr)
+
+                        val fullScreenIntent = Intent(this@LocationService, AlarmActivity::class.java).apply {
+                            putExtra("location_id", locationDetail.id)
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        }
+                        this@LocationService.startActivity(fullScreenIntent)
+                    }
+                }
+
+
             }
 
             locationType == "Exit" && wasInside && !isInside -> {
                 delayedExitStates[id] = false
-                triggerAlarm(locationDetail.id)
                 locationStates[id] = false
+
+                CoroutineScope(Dispatchers.IO).launch {
+                    val addr = getAddressFromLatLng(
+                        this@LocationService,
+                        LatLng(currentLatitude, currentLongitude)
+                    )
+
+                    if (locationDetail.id != -1) {
+                        val entryPoint = EntryPointAccessors.fromApplication(
+                            this@LocationService.applicationContext,
+                            LocationDaoEntryPoint::class.java
+                        )
+                        val locationDao = entryPoint.locationDao()
+                        val contactDAO = entryPoint.contactDAO()
+                        val sharedPreference = entryPoint.mySharedPreference()
+
+                        AlarmHelper
+                            .getInstance(this@LocationService, locationDao, contactDAO, sharedPreference)
+                            .playAlarm(locationDetail.id, addr)
+
+                        val fullScreenIntent = Intent(this@LocationService, AlarmActivity::class.java).apply {
+                            putExtra("location_id", locationDetail.id)
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        }
+                        this@LocationService.startActivity(fullScreenIntent)
+                    }
+                }
+
+
             }
 
             locationType == "Exit" && !wasInside && isInside -> {
@@ -180,12 +238,7 @@ class LocationService : Service() {
         }
     }
 
-    private fun triggerAlarm(locationId: Int) {
-        val intent = Intent(this, LocationTransitionReceiver::class.java).apply {
-            putExtra("location_id", locationId)
-        }
-        sendBroadcast(intent)
-    }
+
 
     override fun onBind(intent: Intent?): IBinder? = null
 

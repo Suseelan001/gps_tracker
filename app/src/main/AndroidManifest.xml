@@ -64,26 +64,12 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyBrZdwwuEPL4MjX0NN51CTCSsve7LGBNDc" />
 
-        <receiver
-            android:name=".GeofenceBroadcastReceiver"
-            android:enabled="true"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.android.gms.location.Geofence" />
-            </intent-filter>
-        </receiver>
-
 
         <receiver
             android:name="com.locationReminder.alarmModel.AlarmReceiver"
             android:exported="true" />
 
-        <receiver android:name=".LocationTransitionReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.locationReminder.LOCATION_REACHED_ALARM" />
-            </intent-filter>
-        </receiver>
+
 
 
 
