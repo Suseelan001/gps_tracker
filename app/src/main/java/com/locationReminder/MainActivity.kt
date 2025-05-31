@@ -9,6 +9,8 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.Window
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -47,6 +49,8 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var locationDao: LocationDAO
     private var isHomeScreenLaunchedFirstTime = true
     private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
+    private lateinit var locationSettingsLauncher: ActivityResultLauncher<Intent>
+
 
     private fun startLocationService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -65,13 +69,30 @@ class MainActivity : ComponentActivity() {
             this.applicationContext,
             LocationDaoEntryPoint::class.java
         )
-         locationDao = entryPoint.locationDao()
+        locationDao = entryPoint.locationDao()
+
+        locationSettingsLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) {
+            if (isLocationEnabled()) {
+                checkBackgroundLocationManually()
+                launchComposeUI()
+            } else {
+                Toast.makeText(this, "Location is still disabled. Please enable it to continue.", Toast.LENGTH_LONG).show()
+            }
+        }
 
         permissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
-            val allGranted = permissions.all { it.value }
-            if (allGranted) {
+            val locationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+            val notificationsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                permissions[Manifest.permission.POST_NOTIFICATIONS] == true
+            } else {
+                true
+            }
+
+            if (locationGranted && notificationsGranted) {
                 if (isLocationEnabled()) {
                     checkBackgroundLocationManually()
                     launchComposeUI()
@@ -85,16 +106,15 @@ class MainActivity : ComponentActivity() {
 
         requestAllPermissions()
     }
-
     private fun isLocationEnabled(): Boolean {
-        val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 
     private fun promptEnableLocation() {
         val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-        startActivity(intent)
+        locationSettingsLauncher.launch(intent)
     }
 
 
@@ -161,10 +181,17 @@ class MainActivity : ComponentActivity() {
         if (permissions.isNotEmpty()) {
             permissionLauncher.launch(permissions.toTypedArray())
         } else {
-            checkBackgroundLocationManually()
-            launchComposeUI()
+            if (isLocationEnabled()) {
+                checkBackgroundLocationManually()
+                launchComposeUI()
+            } else {
+                promptEnableLocation()
+            }
         }
     }
+
+
+
 
     private fun checkBackgroundLocationManually() {
         if (!isBackgroundLocationGranted()) {
@@ -200,6 +227,8 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, true)
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
     }
+
+
 
 
 

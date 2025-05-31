@@ -132,11 +132,7 @@ fun MarkerListScreen(
     val topBarBackgroundColor = Hex222227
     val topBarTextColor = Color.White
 
-    SideEffect {
-        val window = (context as Activity).window
-        window.statusBarColor = "#222227".toColorInt()
-        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
-    }
+
     Scaffold(
         topBar = {
             LargeTopAppBar(
@@ -223,13 +219,6 @@ fun MarkerListScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.leads),
-                            contentDescription = "Empty",
-                            tint = Color.LightGray,
-                            modifier = Modifier.height(120.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "No entries found",
                             style = MaterialTheme.typography.titleMedium,

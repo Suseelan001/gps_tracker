@@ -171,38 +171,61 @@ fun OnEntryListScreen(
                 .padding(paddingValues)
                 .background(Hex222227)
         ) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 1.dp)
-            ) {
-
-
-                items(entryList) { item ->
-                    EntryCard(
-                        item = item,
-                        isSelected = selectedItems.contains(item),
-                        onClick = {
-                            if (isSelectionMode) {
-                                if (selectedItems.contains(item)) selectedItems.remove(item)
-                                else selectedItems.add(item)
-                            }else{
-                                navController.navigate("${NavigationRoute.MAPSCREEN.path}/Entry/${item.id}")
-                                }
-                        },
-                        onLongClick = {
-                            if (!selectedItems.contains(item)) selectedItems.add(item)
-                        },
-                        currentLatitude = currentLatitude.doubleValue,
-                        currentLongitude = currentLongitude.doubleValue,
-                        onToggleChange = { newStatus ->
-                            addLocationViewModel.updateCurrentStatus(item.id,newStatus)
-                        }
+            if (entryList.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "No entries found",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Tap the '+' button to add a new location entry.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
                     )
                 }
-            }
 
+            } else {
+
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 1.dp)
+                ) {
+
+
+                    items(entryList) { item ->
+                        EntryCard(
+                            item = item,
+                            isSelected = selectedItems.contains(item),
+                            onClick = {
+                                if (isSelectionMode) {
+                                    if (selectedItems.contains(item)) selectedItems.remove(item)
+                                    else selectedItems.add(item)
+                                } else {
+                                    navController.navigate("${NavigationRoute.MAPSCREEN.path}/Entry/${item.id}")
+                                }
+                            },
+                            onLongClick = {
+                                if (!selectedItems.contains(item)) selectedItems.add(item)
+                            },
+                            currentLatitude = currentLatitude.doubleValue,
+                            currentLongitude = currentLongitude.doubleValue,
+                            onToggleChange = { newStatus ->
+                                addLocationViewModel.updateCurrentStatus(item.id, newStatus)
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 }

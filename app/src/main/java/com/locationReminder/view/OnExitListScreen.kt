@@ -182,13 +182,6 @@ fun OnExitListScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.leads),
-                        contentDescription = "Empty",
-                        tint = Color.LightGray,
-                        modifier = Modifier.height(120.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "No entries found",
                         style = MaterialTheme.typography.titleMedium,
