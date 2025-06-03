@@ -6,7 +6,7 @@
     const params = new URLSearchParams(window.location.search);
     const category = encodeURIComponent(params.get("categoryFolderName"));
     const userId = encodeURIComponent(params.get("user_id"));
-    const deepLink = `locationReminder://imported_marker?categoryFolderName=${category}&user_id=${userId}`;
+    const deepLink = `yourapp://imported_marker?categoryFolderName=${category}&user_id=${userId}`;
     window.location = deepLink;
   </script>
 </head>
