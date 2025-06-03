@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Redirecting...</title>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const category = encodeURIComponent(params.get("categoryFolderName"));
+    const userId = encodeURIComponent(params.get("user_id"));
+    const deepLink = `locationReminder://imported_marker?categoryFolderName=${category}&user_id=${userId}`;
+    window.location = deepLink;
+  </script>
+</head>
+<body>
+  <p>If the app does not open automatically, <a id="link">click here</a>.</p>
+  <script>
+    document.getElementById("link").href = deepLink;
+  </script>
+</body>
+</html>
