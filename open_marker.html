@@ -1,20 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Location Reminder</title>
-<script>
-const params = new URLSearchParams(window.location.search);
-const category = encodeURIComponent(params.get("categoryFolderName"));
-const userId = encodeURIComponent(params.get("user_id"));
-const categoryId = encodeURIComponent(params.get("categoryId"));
-const deepLink = myapp://imported_marker?categoryFolderName=${category}&user_id=${userId}&categoryId=${categoryId};
-window.location = deepLink;
-</script>
+  <title>Location Reminder</title>
+  <script>
+    let deepLink = "";
+
+    window.onload = function () {
+      const params = new URLSearchParams(window.location.search);
+      const category = encodeURIComponent(params.get("categoryFolderName"));
+      const userId = encodeURIComponent(params.get("user_id"));
+      const categoryId = encodeURIComponent(params.get("categoryId"));
+
+      // Safety check
+      if (!category || !userId || !categoryId) {
+        document.body.innerHTML = "<p>Missing parameters. Cannot redirect.</p>";
+        return;
+      }
+
+      // ✅ Corrected deep link as a string
+      deepLink = `myapp://imported_marker?categoryFolderName=${category}&user_id=${userId}&categoryId=${categoryId}`;
+
+      // Auto redirect
+      window.location.href = deepLink;
+
+      // Fallback link
+      document.getElementById("link").href = deepLink;
+    };
+  </script>
 </head>
 <body>
-<p>If the app does not open automatically, <a id="link">click here</a>.</p>
-<script>
-document.getElementById("link").href = deepLink;
-</script>
+  <p>If the app does not open automatically, <a id="link">click here</a>.</p>
 </body>
 </html>
