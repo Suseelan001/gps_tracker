@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Redirecting...</title>
+  <script>
+    // Declare deepLink globally so it's accessible in both script blocks
+    let deepLink = "";
+
+    window.onload = function () {
+      const params = new URLSearchParams(window.location.search);
+      const category = encodeURIComponent(params.get("categoryFolderName"));
+      const userId = encodeURIComponent(params.get("user_id"));
+      const categoryId = encodeURIComponent(params.get("categoryId"));
+
+      // Optional safety check
+      if (!category || !userId || !categoryId) {
+        document.body.innerHTML = "<p>Missing parameters. Cannot redirect to app.</p>";
+        return;
+      }
+
+      // Build the deep link
+      deepLink = `myapp://imported_marker?categoryFolderName=${category}&user_id=${userId}&categoryId=${categoryId}`;
+
+      // Auto-redirect
+      window.location = deepLink;
+
+      // Also set the link in the HTML
+      document.getElementById("link").href = deepLink;
+    };
+  </script>
+</head>
+<body>
+  <p>If the app does not open automatically, <a id="link">click here</a>.</p>
+</body>
+</html>
