@@ -4,6 +4,10 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("kotlin-kapt")
     id ("dagger.hilt.android.plugin")
+    id("com.google.devtools.ksp")
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
+
 }
 
 android {
@@ -39,6 +43,8 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        viewBinding = true
+
 
     }
 }
@@ -100,7 +106,7 @@ dependencies {
 
     // Room Database
     implementation(libs.androidx.room.runtime)
-    kapt("androidx.room:room-compiler:2.7.1")
+    ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
 
 
@@ -108,6 +114,10 @@ dependencies {
 
     implementation (libs.androidx.lifecycle.process)
 
+    implementation(libs.play.services.ads)
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.crashlytics)
 
 
 }

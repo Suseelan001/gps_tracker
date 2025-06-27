@@ -22,18 +22,19 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.locationReminder.model.apiUtil.serviceModel.LocationDaoEntryPoint
 import com.locationReminder.reponseModel.LocationDetail
-import com.locationReminder.roomDatabase.dao.ContactDAO
 import com.locationReminder.roomDatabase.dao.LocationDAO
 import dagger.hilt.android.EntryPointAccessors
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.maps.model.LatLng
-import com.locationReminder.alarmModel.AlarmActivity
 import com.locationReminder.alarmModel.AlarmHelper
+import com.locationReminder.roomDatabase.dao.SettingsDAO
 import com.locationReminder.view.getAddressFromLatLng
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 class LocationService : Service() {
@@ -41,11 +42,15 @@ class LocationService : Service() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationDao: LocationDAO
-    private lateinit var contactDao: ContactDAO
+    private lateinit var settingsDAO: SettingsDAO
+    lateinit var alarmHelper: AlarmHelper
+
 
     private val locationStates = mutableMapOf<String, Boolean>()
-    private val delayedExitStates = mutableMapOf<String, Boolean>()
     private var monitoredLocations: List<LocationDetail> = emptyList()
+    private val delayedEntryStates = mutableMapOf<String, Boolean>()
+    private val delayedExitStates = mutableMapOf<String, Boolean>()
+
     private var isLocationUpdatesStarted = false
 
 
@@ -62,41 +67,88 @@ class LocationService : Service() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(stopUpdatesReceiver, IntentFilter("ACTION_STOP_LOCATION_UPDATES"))
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            stopUpdatesReceiver,
+            IntentFilter("ACTION_STOP_LOCATION_UPDATES")
+        )
 
         val entryPoint = EntryPointAccessors.fromApplication(
             applicationContext,
             LocationDaoEntryPoint::class.java
         )
         locationDao = entryPoint.locationDao()
-        contactDao = entryPoint.contactDAO()
-
-        locationRequest  = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000L)
-            .setMinUpdateDistanceMeters(10.0f)
-            .setMinUpdateIntervalMillis(10000L)
-            .build()
+        settingsDAO = entryPoint.settingsDAO()
+        alarmHelper = entryPoint.alarmHelper()
 
 
+        settingsDAO.getSettings().observe(ProcessLifecycleOwner.get()) { settings ->
+            val intervalTime = if (settings != null) {
+                val intervalInSec = convertIntervalToSeconds(settings.locationUpdateInterval)
+                intervalInSec * 1000L
+            } else {
+                3000L
+            }
+            locationRequest = LocationRequest.Builder(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                intervalTime
+            )
+                .setMinUpdateIntervalMillis(intervalTime)
+                .setMinUpdateDistanceMeters(3.0f)
+                .build()
 
-        startForegroundServiceNotification()
-        startLocationUpdates()
-        loadMonitoredLocations()
+            startLocationUpdates()
+
+            startForegroundServiceNotification()
+            loadMonitoredLocations()
+        }
+
+
     }
+
+    fun convertIntervalToSeconds(interval: String): Long {
+        return when {
+            interval.equals("adaptable", ignoreCase = true) -> 3L
+            interval.contains("second", ignoreCase = true) -> {
+                interval.filter { it.isDigit() }.toLongOrNull() ?: 5L
+            }
+            interval.contains("minute", ignoreCase = true) -> {
+                (interval.filter { it.isDigit() }.toLongOrNull() ?: 1L) * 60
+            }
+            else -> 3L
+        }
+    }
+
 
     private fun startForegroundServiceNotification() {
         val channelId = "location_channel"
-        val channel = NotificationChannel(channelId, "Location Tracking", NotificationManager.IMPORTANCE_LOW)
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
+        val channelName = "Location Tracking"
+
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+        val channel = NotificationChannel(
+            channelId,
+            channelName,
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Used for location tracking in background"
+            enableLights(false)
+            enableVibration(false)
+            setSound(null, null)
+        }
+        notificationManager.createNotificationChannel(channel)
 
         val notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Location Tracking")
-            .setContentText("Running in background")
+            .setContentTitle("Location Service Running")
+            .setContentText("Your location is being tracked in the background.")
             .setSmallIcon(R.drawable.notification)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setOngoing(true)
             .build()
 
         startForeground(1, notification)
     }
+
 
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     private fun startLocationUpdates() {
@@ -128,9 +180,10 @@ class LocationService : Service() {
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     private fun loadMonitoredLocations() {
         locationDao.getAllRecord().observe(ProcessLifecycleOwner.get()) { allLocations ->
+
             monitoredLocations = allLocations.filter {
                 it.currentStatus == true &&
-                        (it.entryType == "Entry" || it.entryType == "Exit")
+                        (it.entryType == "Entry" || it.entryType == "Exit"|| it.entryType == "Marker"|| it.entryType == "ImportedMarker")
             }
             if (monitoredLocations.isEmpty()) {
                 stopLocationUpdates()
@@ -148,93 +201,79 @@ class LocationService : Service() {
         isLocationUpdatesStarted = false
     }
 
-    fun handleLocationTransition(locationDetail: LocationDetail, isInside: Boolean, currentLatitude: Double, currentLongitude: Double) {
+    fun handleLocationTransition(
+        locationDetail: LocationDetail,
+        isInside: Boolean,
+        currentLatitude: Double,
+        currentLongitude: Double
+    ) {
         val id = locationDetail.id.toString()
         val wasInside = locationStates[id] == true
         val locationType = locationDetail.entryType
+        val isEntryType = locationType in listOf("Entry", "Marker", "ImportedMarker")
 
-
-
-
-        when {
-            locationType == "Entry" && !wasInside && isInside -> {
-                delayedExitStates[id] = false
-                locationStates[id] = true
-                CoroutineScope(Dispatchers.IO).launch {
-                    val addr = getAddressFromLatLng(
-                        this@LocationService,
-                        LatLng(currentLatitude, currentLongitude)
-                    )
-
-                    if (locationDetail.id != -1) {
-                        val entryPoint = EntryPointAccessors.fromApplication(
-                            this@LocationService.applicationContext,
-                            LocationDaoEntryPoint::class.java
-                        )
-                        val locationDao = entryPoint.locationDao()
-                        val contactDAO = entryPoint.contactDAO()
-                        val sharedPreference = entryPoint.mySharedPreference()
-
-                        AlarmHelper
-                            .getInstance(this@LocationService, locationDao, contactDAO, sharedPreference)
-                            .playAlarm(locationDetail.id, addr)
-
-                        val fullScreenIntent = Intent(this@LocationService, AlarmActivity::class.java).apply {
-                            putExtra("location_id", locationDetail.id)
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        }
-                        this@LocationService.startActivity(fullScreenIntent)
-                    }
-                }
-
-
+        if (isEntryType) {
+            // 🟡 1. First time check — skip triggering but record state
+            if (locationStates[id] == null) {
+                locationStates[id] = isInside
+                delayedEntryStates[id] = isInside
+                return // Exit early
             }
 
-            locationType == "Exit" && wasInside && !isInside -> {
-                delayedExitStates[id] = false
+            // ✅ 2. Immediate Entry
+            if (!wasInside && isInside && delayedEntryStates[id] != true) {
+                locationStates[id] = true
+                triggerAlarm(locationDetail, currentLatitude, currentLongitude)
+            }
+
+            else if (delayedEntryStates[id] == true && !wasInside && isInside) {
+                delayedEntryStates[id] = false
+                locationStates[id] = true
+                triggerAlarm(locationDetail, currentLatitude, currentLongitude)
+            }
+
+            else if (wasInside && !isInside) {
                 locationStates[id] = false
+            }
 
-                CoroutineScope(Dispatchers.IO).launch {
-                    val addr = getAddressFromLatLng(
-                        this@LocationService,
-                        LatLng(currentLatitude, currentLongitude)
-                    )
+            return
+        }
 
-                    if (locationDetail.id != -1) {
-                        val entryPoint = EntryPointAccessors.fromApplication(
-                            this@LocationService.applicationContext,
-                            LocationDaoEntryPoint::class.java
-                        )
-                        val locationDao = entryPoint.locationDao()
-                        val contactDAO = entryPoint.contactDAO()
-                        val sharedPreference = entryPoint.mySharedPreference()
 
-                        AlarmHelper
-                            .getInstance(this@LocationService, locationDao, contactDAO, sharedPreference)
-                            .playAlarm(locationDetail.id, addr)
-
-                        val fullScreenIntent = Intent(this@LocationService, AlarmActivity::class.java).apply {
-                            putExtra("location_id", locationDetail.id)
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        }
-                        this@LocationService.startActivity(fullScreenIntent)
-                    }
+        if (locationType == "Exit") {
+            when {
+                wasInside && !isInside && delayedExitStates[id] != true -> {
+                    locationStates[id] = false
+                    triggerAlarm(locationDetail, currentLatitude, currentLongitude)
                 }
 
+                !wasInside && isInside -> {
+                    locationStates[id] = true
+                    delayedExitStates[id] = true
+                }
 
-            }
+                // ✅ Flow 3: Delayed Exit Trigger — now exiting after setup
+                delayedExitStates[id] == true && wasInside && !isInside -> {
+                    locationStates[id] = false
+                    delayedExitStates[id] = false
+                    triggerAlarm(locationDetail, currentLatitude, currentLongitude)
+                }
 
-            locationType == "Exit" && !wasInside && isInside -> {
-                locationStates[id] = true
-                delayedExitStates[id] = false
-            }
-
-            locationType == "Exit" && !isInside && !wasInside -> {
-                delayedExitStates[id] = true
+                // Update current state passively
+                isInside -> locationStates[id] = true
+                else -> locationStates[id] = false
             }
         }
     }
 
+    private fun triggerAlarm(locationDetail: LocationDetail, lat: Double, lng: Double) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val addr = getAddressFromLatLng(this@LocationService, LatLng(lat, lng))
+            if (locationDetail.id != -1) {
+                alarmHelper.playAlarm(locationDetail.id, addr)
+            }
+        }
+    }
 
 
     override fun onBind(intent: Intent?): IBinder? = null

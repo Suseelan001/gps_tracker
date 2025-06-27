@@ -1,6 +1,6 @@
 package com.locationReminder.view
 
-import android.app.Activity
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.background
@@ -37,7 +37,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -54,31 +53,45 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.toColorInt
-import androidx.core.view.WindowCompat
+import com.locationReminder.reponseModel.CommonResponseModel
 import com.locationReminder.reponseModel.LocationDetail
-import com.locationReminder.reponseModel.SettingsData
 import com.locationReminder.ui.theme.Hex222227
 import com.locationReminder.ui.theme.Hexa0a0a0
 import com.locationReminder.view.appNavigation.NavigationRoute
 import com.locationReminder.viewModel.AddSettingsViewModel
+import com.locationReminder.viewModel.SharedPreferenceVM
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(
     navController: NavHostController,
-    addSettingsViewModel: AddSettingsViewModel
+    addSettingsViewModel: AddSettingsViewModel,
+    sharedPreferenceVM:SharedPreferenceVM
 ) {
     val selectedItems = remember { mutableStateListOf<LocationDetail>() }
     val isSelectionMode = selectedItems.isNotEmpty()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val showMenu = remember { mutableStateOf(false) }
-    val context = LocalContext.current
     var showDistanceDialog by remember { mutableStateOf(false) }
     var showLocationUpdateIntervalDialog by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
+    var LogoutDialog by remember { mutableStateOf(false) }
     var selectedUnit by remember { mutableStateOf("") }
     var selectedLocationUpdateInterval by remember { mutableStateOf("") }
+    val context = LocalContext.current
+
+    val updateResponse: CommonResponseModel? by addSettingsViewModel.updateResponse.observeAsState(initial = null)
+
+    LaunchedEffect(updateResponse) {
+        updateResponse?.let { data ->
+                if (data.message == "appLogout") {
+                    Toast.makeText(context, "Successfully logged out", Toast.LENGTH_SHORT).show()
+                  navController.popBackStack()
+                }
+
+        }
+
+    }
 
     var entry by remember { mutableStateOf("") }
     var exit by remember { mutableStateOf("") }
@@ -97,34 +110,23 @@ fun SettingsScreen(
         }
     }
 
-    SideEffect {
-        val window = (context as Activity).window
-        window.statusBarColor = "#222227".toColorInt()
-        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
-    }
+
 
     val settingsRecord by addSettingsViewModel.getAllRecord().observeAsState()
 
-    LaunchedEffect(settingsRecord) {
-        if (settingsRecord == null) {
-            addSettingsViewModel.insertRecord(
-                SettingsData(
-                    unit = "Meters/Kilometers",
-                    locationUpdateInterval = "adaptable",
-                    entryRadius = "100",
-                    exitRadius = "100",
-                    maximumRadius = "2000"
-                )
-            )
-        } else {
-            selectedUnit = settingsRecord!!.unit
-            selectedLocationUpdateInterval = settingsRecord!!.locationUpdateInterval
-            entry = settingsRecord!!.entryRadius
-            exit = settingsRecord!!.exitRadius
-            max = settingsRecord!!.maximumRadius
-        }
+    LaunchedEffect(Unit) {
+        addSettingsViewModel.ensureDefaultSettingsInserted()
     }
 
+    LaunchedEffect(settingsRecord) {
+        settingsRecord?.let { record ->
+            selectedUnit = record.unit
+            selectedLocationUpdateInterval = record.locationUpdateInterval
+            entry = record.entryRadius
+            exit = record.exitRadius
+            max = record.maximumRadius
+        }
+    }
 
     LaunchedEffect(showDialog) {
         if (showDialog && settingsRecord != null) {
@@ -196,6 +198,7 @@ fun SettingsScreen(
                     showDialog = true
                 }
 
+                if (sharedPreferenceVM.isUserLoggedIn()) {
                 SettingItem(
                     title = "Add emergency contact",
                     subtitle = "Send a notification to a parent or relative"
@@ -203,6 +206,35 @@ fun SettingsScreen(
                     navController.navigate(NavigationRoute.CONTACTNUMBERSLISTCREEN.path)
                 }
             }
+                if (sharedPreferenceVM.isUserLoggedIn()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                            .clickable {
+                                LogoutDialog=true
+                            }
+                    ) {
+                        Text(text = "Log out", style = MaterialTheme.typography.bodyLarge.copy(color = Color.White))
+
+                    }
+            }else{
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                            .clickable {
+                                navController.navigate(NavigationRoute.LOGINHOME.path)
+                            }
+                    ) {
+                        Text(text = "Login", style = MaterialTheme.typography.bodyLarge.copy(color = Color.White))
+
+                    }
+                }
+
+
+            }
+
 
             if (showDistanceDialog) {
                 ShowDistanceDialog(
@@ -224,6 +256,16 @@ fun SettingsScreen(
                         selectedLocationUpdateInterval = it
                         addSettingsViewModel.updateLocationUpdateInterval(it)
                         showLocationUpdateIntervalDialog = false
+                    }
+                )
+            }
+
+            if (LogoutDialog) {
+                LogoutDialog(
+                    onDismiss = { LogoutDialog = false },
+                    onConfirmLogout = {
+                        addSettingsViewModel.appLogout()
+                        LogoutDialog = false
                     }
                 )
             }
@@ -289,9 +331,9 @@ fun ShowDistanceDialog(
             Column {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                val sounds = listOf("Meters/Kilometers", "Kilometers/Mile","Yard/Mile","Foot/Meters")
+                val distance = listOf("Meters/Kilometers", "Kilometers/Mile","Yard/Mile","Foot/Meters")
 
-                sounds.forEach { sound ->
+                distance.forEach { sound ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -358,6 +400,29 @@ fun ShowLocationUpdateIntervalDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text("Close")
+            }
+        }
+    )
+}
+
+
+@Composable
+fun LogoutDialog(
+    onDismiss: () -> Unit,
+    onConfirmLogout: () -> Unit
+)   {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "Logout") },
+        text = { Text(text = "Are you sure you want to logout?") },
+        confirmButton = {
+            TextButton(onClick = onConfirmLogout) {
+                Text("Yes")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
             }
         }
     )

@@ -7,7 +7,7 @@
       </SelectionState>
       <SelectionState runConfigName="Location_Reminder.app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-05-30T11:30:34.766709Z">
+        <DropdownSelection timestamp="2025-06-16T06:28:55.506039800Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="PhysicalDevice" identifier="serial=8976c5fc2c29" />

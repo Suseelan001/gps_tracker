@@ -113,5 +113,15 @@ class AppHiltModule {
     fun provideUserDao(roomBaseSetup: RoomBaseSetup) =roomBaseSetup.userDao()
 
 
+   @Provides
+    @Singleton
+    fun provideFolderNameDAO(roomBaseSetup: RoomBaseSetup) =roomBaseSetup.folderNameDAO()
+
+
+   @Provides
+    @Singleton
+    fun provideImportedCategoryNameDAO(roomBaseSetup: RoomBaseSetup) =roomBaseSetup.ImportedCategoryNameDAO()
+
+
 
 }

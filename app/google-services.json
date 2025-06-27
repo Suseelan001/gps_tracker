@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "825342041728",
+    "project_id": "location-reminder-a4d28",
+    "storage_bucket": "location-reminder-a4d28.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:825342041728:android:047e4b9bc21bb92d741065",
+        "android_client_info": {
+          "package_name": "com.locationReminder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPQizCf6IM4XO2piA9YQ_num6ILavg5pc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

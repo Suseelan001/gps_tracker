@@ -22,7 +22,6 @@ class MySharedPreference @Inject constructor(context: Context) {
         return sharedPreference.getString("USER-ID", null)
     }
 
-
     fun saveUserName(userId: String) {
         editor.putString("USER_NAME", userId)
         editor.commit()
@@ -32,12 +31,23 @@ class MySharedPreference @Inject constructor(context: Context) {
         return sharedPreference.getString("USER_NAME", null)
     }
 
+    fun setExitListExists(value: Boolean) {
+        editor.putBoolean("EXIT-LIST-EXISTS", value)
+        editor.commit()
+    }
+
+    fun getExitListExists(): Boolean? {
+        return sharedPreference.getBoolean("EXIT-LIST-EXISTS", false)
+    }
+
+
 
 
 
     fun clearAll() {
         editor.putString("USER-ID", null)
         editor.putString("USER_NAME", null)
+        editor.putBoolean("EXIT-LIST-EXISTS", false)
         editor.commit()
     }
 

@@ -1,5 +1,7 @@
 package com.locationReminder.view.appNavigation
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
@@ -14,7 +16,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -29,6 +30,7 @@ import com.locationReminder.ui.theme.Hex222227
 import com.locationReminder.ui.theme.Hex36374a
 import com.locationReminder.ui.theme.HexFFFFFF
 import com.locationReminder.ui.theme.Hexeef267
+import com.locationReminder.viewModel.SharedPreferenceVM
 
 
 @Composable
@@ -36,9 +38,10 @@ fun BottomBar(
     navController: NavHostController,
     state: MutableState<Boolean>,
     modifier: Modifier = Modifier,
-) {
+    sharedPreferenceVM:SharedPreferenceVM,
+    context: Context) {
     val screens = listOf(Destinations.HOME, Destinations.BOOKINGS, Destinations.TRANSACTIONS, Destinations.SETTINGS)
-    val bottomBarHeight = 80.dp
+    val bottomBarHeight = 120.dp
 
     if (state.value) {
         Box(modifier = modifier.height(bottomBarHeight)) {
@@ -48,6 +51,31 @@ fun BottomBar(
                     .height(bottomBarHeight),
                 containerColor =Hex36374a,
             ) {
+
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
+
+                screens.take(4).forEach { screen ->
+                    NavigationBarItem(
+                        icon = { ScreenIcon(screen, currentRoute) },
+                        selected = currentRoute == screen.route,
+                        onClick = { navigateToScreen(navController, screen) },
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = Color.Transparent,
+                            selectedIconColor = Hexeef267,
+                            unselectedIconColor = Hexeef267,
+                            selectedTextColor = Hexeef267,
+                            unselectedTextColor = Hexeef267
+                        )
+
+                    )
+                }
+
+
+
+
+
+                /*
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
 
@@ -57,7 +85,7 @@ fun BottomBar(
                         selected = currentRoute == screen.route,
                         onClick = { navigateToScreen(navController, screen) },
                         colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = Color.Transparent, // No background selection
+                            indicatorColor = Color.Transparent,
                             selectedIconColor = Hexeef267,
                             unselectedIconColor = Hexeef267,
                             selectedTextColor = Hexeef267,
@@ -67,13 +95,12 @@ fun BottomBar(
                     )
                 }
 
-                // Empty spacer item for FAB
                 NavigationBarItem(
                     icon = {},
                     selected = false,
                     onClick = {},
                     colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = Color.Transparent, // No background selection
+                        indicatorColor = Color.Transparent,
                         selectedIconColor = Hexeef267,
                         unselectedIconColor = Hexeef267,
                         selectedTextColor = Hexeef267,
@@ -82,14 +109,13 @@ fun BottomBar(
 
                 )
 
-                // Last two items on the right
                 screens.takeLast(2).forEach { screen ->
                     NavigationBarItem(
                         icon = { ScreenIcon(screen, currentRoute) },
                         selected = currentRoute == screen.route,
                         onClick = { navigateToScreen(navController, screen) },
                         colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = Color.Transparent, // No background selection
+                            indicatorColor = Color.Transparent,
                             selectedIconColor = Hexeef267,
                             unselectedIconColor = Hexeef267,
                             selectedTextColor = Hexeef267,
@@ -97,10 +123,10 @@ fun BottomBar(
                         )
 
                     )
-                }
+                }*/
             }
 
-            FloatingActionButton(
+      /*      FloatingActionButton(
                 onClick = {
                     val currentRoute = navController.currentBackStackEntry?.destination?.route
 
@@ -119,17 +145,35 @@ fun BottomBar(
                             screen = "Entry"
                         }
                     }
-                    navController.navigate("${NavigationRoute.MAPSCREEN.path}/$screen/${""}") {
-                        popUpTo(NavigationRoute.MAPSCREEN.path) {
-                            inclusive = false
+
+                    if (screen=="Marker"){
+                        if (sharedPreferenceVM.isUserLoggedIn()){
+                            navController.navigate("${NavigationRoute.ADDFOLDERNAMESCREEN.path}/${""}/${""}/${""}") {
+                                popUpTo(NavigationRoute.FOLLOWSUPSCREEN.path) {
+                                    inclusive = false
+                                }
+                                launchSingleTop = true
+                            }
+                        }else{
+                            Toast.makeText(context, "Login to create marker list", Toast.LENGTH_SHORT).show()
                         }
-                        launchSingleTop = true
+
+                    }else{
+                        navController.navigate("${NavigationRoute.MAPSCREEN.path}/$screen/${""}/${""}") {
+                            popUpTo(NavigationRoute.MAPSCREEN.path) {
+                                inclusive = false
+                            }
+                            launchSingleTop = true
+                        }
                     }
+
 
                 },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .offset(y = (-56).dp),
+                   // .offset(y = (-94).dp)
+                    .offset(y = (-58).dp)
+                ,
                 containerColor = Hexeef267,
                 contentColor = Hexeef267,
                 shape = CircleShape
@@ -141,7 +185,7 @@ fun BottomBar(
                     modifier = Modifier.size(38.dp)
                 )
             }
-
+*/
 
         }
     }

@@ -1,12 +1,12 @@
 package com.locationReminder.view
 
-import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Looper
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,23 +23,21 @@ import androidx.compose.ui.unit.dp
 import com.locationReminder.viewModel.AddLocationViewModel
 import com.locationReminder.R
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.app.ActivityCompat
-import androidx.core.graphics.toColorInt
-import androidx.core.view.WindowCompat
 import androidx.navigation.NavHostController
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -49,6 +47,7 @@ import com.google.android.gms.location.Priority
 import com.locationReminder.reponseModel.LocationDetail
 import com.locationReminder.ui.theme.Hex222227
 import com.locationReminder.ui.theme.Hex36374a
+import com.locationReminder.ui.theme.Hexeef267
 import com.locationReminder.ui.theme.RobotoMediumWithHexFFFFFF18sp
 import com.locationReminder.ui.theme.RobotoRegularWithHexFFFFFF14sp
 import com.locationReminder.ui.theme.RobotoRegularWithHexHex80808016sp
@@ -63,14 +62,38 @@ import java.util.Locale
 fun MarkerListScreen(
     navController: NavHostController,
     addLocationViewModel: AddLocationViewModel,
-    sharedPreferenceVM: SharedPreferenceVM
+    sharedPreferenceVM: SharedPreferenceVM,
+    categoryId: String,
+    categoryTitle: String
 ) {
-
     LaunchedEffect(Unit) {
-        addLocationViewModel.getMarkerList()
+            val userId=sharedPreferenceVM.getUserId()
+            addLocationViewModel.getMarkerList("eq.$categoryId","eq.$userId")
     }
-    val getAccountList by addLocationViewModel.getAllRecord().observeAsState(emptyList())
+
+    val getAccountList by addLocationViewModel.locationDetail.observeAsState(emptyList())
     val markerList = getAccountList.filter { it.entryType.equals("Marker", ignoreCase = true) }
+    val isLoading by addLocationViewModel.loading.observeAsState(true)
+
+
+
+   val successMessage by  addLocationViewModel.successMessage.observeAsState("")
+
+if (successMessage=="Record deleted"){
+
+        val userId=sharedPreferenceVM.getUserId()
+        addLocationViewModel.getMarkerList("eq.$categoryId","eq.$userId")
+    addLocationViewModel.clearSuccessMessage()
+}
+if (successMessage=="Record updated"){
+
+        val userId=sharedPreferenceVM.getUserId()
+        addLocationViewModel.getMarkerList("eq.$categoryId","eq.$userId")
+    addLocationViewModel.clearSuccessMessage()
+
+
+}
+
 
     val selectedItems = remember { mutableStateListOf<LocationDetail>() }
     val isSelectionMode = selectedItems.isNotEmpty()
@@ -108,7 +131,7 @@ fun MarkerListScreen(
                     Priority.PRIORITY_HIGH_ACCURACY,
                     5000L
                 ).apply {
-                    setMinUpdateDistanceMeters(1f)
+                    setMinUpdateDistanceMeters(5f)
                 }.build()
 
                 val locationCallback = object : LocationCallback() {
@@ -139,19 +162,15 @@ fun MarkerListScreen(
                 title = {
                     Text(
                         if (isSelectionMode) "${selectedItems.size} selected"
-                        else "On Marker",
+                        else "On Marker (Entry)",
                         color = topBarTextColor
                     )
                 },
                 actions = {
                     if (isSelectionMode) {
                         IconButton(onClick = {
-
-
                             selectedItems.forEach {
                                 addLocationViewModel.deleteMarker("eq.${it.id}")
-
-                              addLocationViewModel.deleteItem(it)
                             }
                             selectedItems.clear()
                         }) {
@@ -172,16 +191,20 @@ fun MarkerListScreen(
                     navigationIconContentColor = topBarTextColor,
                     actionIconContentColor = topBarTextColor
                 ),
+
                 scrollBehavior = scrollBehavior
             )
+
         },
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(Hex222227)
+                .padding(bottom = 15.dp)
+
         ) {
             if (sharedPreferenceVM.isUserLoggedIn() == false) {
                 Box(
@@ -209,9 +232,22 @@ fun MarkerListScreen(
                         }
                     }
                 }
-            }else{
+            }else
+            {
 
-                if (markerList.isEmpty()) {
+                when {
+                    isLoading -> {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp)
+                        ) {
+                            items(5) { MarkerShimmerCardPlaceholder() }
+                        }
+                    }
+
+                  markerList.isEmpty() ->  {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -232,8 +268,11 @@ fun MarkerListScreen(
                         )
                     }
 
-                } else
-                {
+                }
+
+
+                else ->  {
+
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
@@ -242,6 +281,8 @@ fun MarkerListScreen(
                     ) {
                         items(markerList) { item ->
                             val isSelected = selectedItems.contains(item)
+                            val toggleState = remember { mutableStateOf(item.currentStatus) }
+
 
                             Card(
                                 modifier = Modifier
@@ -253,8 +294,8 @@ fun MarkerListScreen(
                                             if (isSelectionMode) {
                                                 if (isSelected) selectedItems.remove(item)
                                                 else selectedItems.add(item)
-                                            }else{
-                                                navController.navigate("${NavigationRoute.MAPSCREEN.path}/Marker/${item.id}")
+                                            } else {
+                                                navController.navigate("${NavigationRoute.MAPSCREEN.path}/Marker/${item.id}/$categoryId/$categoryTitle")
 
                                             }
                                         },
@@ -269,7 +310,7 @@ fun MarkerListScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(top=8.dp),
+                                        .padding(top = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Image(
@@ -287,7 +328,6 @@ fun MarkerListScreen(
                                             .padding(end = 16.dp, bottom = 16.dp)
                                             .wrapContentWidth()
                                     ) {
-                                        var toggleState by remember { mutableStateOf(item.currentStatus) }
 
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
@@ -303,12 +343,18 @@ fun MarkerListScreen(
                                             )
                                             Spacer(Modifier.width(4.dp))
                                             Switch(
-                                                checked = toggleState,
-                                                onCheckedChange = { newState ->
-                                                    toggleState = newState
-                                                    addLocationViewModel.updateCurrentStatus(item.id,newState )
-                                                },
-                                                modifier = Modifier.scale(0.75f),
+                                                checked = toggleState.value,
+                                                onCheckedChange = null,
+                                                modifier = Modifier
+                                                    .scale(0.75f)
+                                                    .clickable {
+                                                        toggleState.value = !toggleState.value
+                                                        if (item.entryType == "Marker") {
+                                                            addLocationViewModel.updateMarkerStatus("eq.${item.id}", toggleState.value)
+                                                        } else {
+                                                            addLocationViewModel.updateCurrentStatus(item.id, toggleState.value)
+                                                        }
+                                                    },
                                                 colors = SwitchDefaults.colors(
                                                     uncheckedThumbColor = Color(0xFFEEF267),
                                                     checkedThumbColor = Color.White,
@@ -318,6 +364,7 @@ fun MarkerListScreen(
                                                     checkedBorderColor = Color.Transparent
                                                 )
                                             )
+
 
 
                                         }
@@ -361,9 +408,107 @@ fun MarkerListScreen(
                 }
             }
 
-        }
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+
+                if (markerList.isNotEmpty()){
+                    FloatingActionButton(
+                        onClick = {
+                            navController.navigate("${NavigationRoute.VIEWALLMAPSCREEN.path}/Marker/$categoryId") {
+                                popUpTo(NavigationRoute.VIEWALLMAPSCREEN.path) {
+                                    inclusive = false
+                                }
+                                launchSingleTop = true
+                            }
+                        },
+                        containerColor = Hexeef267,
+                        contentColor = Hex222227,
+                        modifier = Modifier.padding(end = 24.dp, bottom = 12.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.viewall), contentDescription = "View All")
+                    }
+                }
+
+                FloatingActionButton(
+                    onClick = {
+                        navController.navigate("${NavigationRoute.MAPSCREEN.path}/Marker/${""}/$categoryId/$categoryTitle") {
+                            popUpTo(NavigationRoute.MAPSCREEN.path) {
+                                inclusive = false
+                            }
+                            launchSingleTop = true
+                        }
+                    },
+                    containerColor = Hexeef267,
+                    contentColor = Hex222227,
+                    modifier = Modifier.padding(end = 24.dp, bottom = 24.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Marker")
+                }
+
+            }
+
         }
 
     }
+
+
+}
+
+@Composable
+fun MarkerShimmerCardPlaceholder() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(100.dp)
+            .padding(bottom = 16.dp),
+        colors = CardDefaults.cardColors(containerColor = Hex36374a)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(70.dp)
+                    .customShimmer()
+                    .background(Color.Gray, shape = RoundedCornerShape(8.dp))
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(0.7f),
+                verticalArrangement = Arrangement.SpaceAround
+            ) {
+                Box(
+                    modifier = Modifier
+                        .height(20.dp)
+                        .fillMaxWidth()
+                        .customShimmer()
+                        .background(Color.Gray, shape = RoundedCornerShape(4.dp))
+                )
+                Box(
+                    modifier = Modifier
+                        .height(20.dp)
+                        .fillMaxWidth(0.5f)
+                        .customShimmer()
+                        .background(Color.Gray, shape = RoundedCornerShape(4.dp))
+                )
+            }
+        }
+    }
+}
+
 
 

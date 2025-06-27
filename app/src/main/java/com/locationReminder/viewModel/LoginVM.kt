@@ -1,5 +1,6 @@
 package com.locationReminder.viewModel
 
+import android.widget.Toast
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -7,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.locationReminder.model.apiUtil.serviceModel.BaseNetworkSyncClass
 import com.locationReminder.model.apiUtil.utils.NetworkResult
 import com.locationReminder.model.localStorage.MySharedPreference
+import com.locationReminder.roomDatabase.repository.AddLocationDatabaseRepository
 import com.locationReminder.roomDatabase.repository.UserDatabaseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -16,7 +18,8 @@ import javax.inject.Inject
 class LoginVM @Inject constructor(
     private val baseNetworkCall: BaseNetworkSyncClass,
     private val mySharedPreference: MySharedPreference,
-    private val userDatabaseRepository: UserDatabaseRepository
+    private val userDatabaseRepository: UserDatabaseRepository,
+    private val addLocationDatabaseRepository: AddLocationDatabaseRepository,
 ) : ViewModel() {
 
     private val _userDetail = MutableLiveData<UserDetailResponseModel?>()
@@ -47,10 +50,21 @@ class LoginVM @Inject constructor(
                 val users = result.data
                 if (!users.isNullOrEmpty()) {
                     val user = users.first()
-                    mySharedPreference.saveUserId(user.id!!.toString())
-                    mySharedPreference.saveUserName(user.username!!.toString())
-                    userDatabaseRepository.insertUser(user)
-                    _userDetail.postValue(user)
+                    if (user.userMail!="USER_ALREADY_EXISTS"){
+                        val localLocations = addLocationDatabaseRepository.getAllRecordsNow()
+                        if (localLocations.isNotEmpty()) {
+                            mySharedPreference.setExitListExists(true)
+                        }
+
+                        mySharedPreference.saveUserId(user.id!!.toString())
+                        mySharedPreference.saveUserName(user.username!!.toString())
+                        userDatabaseRepository.insertUser(user)
+                        _userDetail.postValue(user)
+                    }else{
+                        _errorMessage.postValue("User already exists")
+
+                    }
+
                 } else {
                     _errorMessage.postValue("No user returned from API")
                 }
@@ -86,6 +100,11 @@ class LoginVM @Inject constructor(
                 } else {
                     val user = userList.firstOrNull()
                     user?.let {
+                        val localLocations = addLocationDatabaseRepository.getAllRecordsNow()
+                        if (localLocations.isNotEmpty()) {
+                            mySharedPreference.setExitListExists(true)
+                        }
+
                         mySharedPreference.saveUserId(it.id!!.toString())
                         mySharedPreference.saveUserName(it.username!!.toString())
                         userDatabaseRepository.insertUser(it)
@@ -97,7 +116,6 @@ class LoginVM @Inject constructor(
             }
 
             is NetworkResult.Error -> {
-                println("CHECK_TAG_ERROR " + result.message)
                 _errorMessage.postValue(result.message ?: "Something went wrong")
                 _loading.postValue(false)
             }

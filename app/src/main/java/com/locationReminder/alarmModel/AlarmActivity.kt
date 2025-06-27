@@ -30,7 +30,9 @@ class AlarmActivity : ComponentActivity() {
     @Inject
     lateinit var sharedPreference: MySharedPreference
 
-    private lateinit var alarmHelper: AlarmHelper
+    @Inject lateinit var alarmHelper: AlarmHelper
+
+
     private var locationId: Int? = null
     private lateinit var leftCircle: View
     private lateinit var rightCircle: TextView
@@ -40,6 +42,7 @@ class AlarmActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_alarm)
+        alarmHelper.setCurrentActivity(this)
 
         locationId = intent.getIntExtra("location_id", -1).takeIf { it != -1 }
         locationId?.let {
@@ -53,6 +56,7 @@ class AlarmActivity : ComponentActivity() {
                 "Entry" -> alarmIcon.setImageResource(R.drawable.onentry)
                 "Exit" -> alarmIcon.setImageResource(R.drawable.onexit)
                 "Marker" -> alarmIcon.setImageResource(R.drawable.marker)
+                "ImportedMarker" -> alarmIcon.setImageResource(R.drawable.marker)
             }
             locationTitle.text = when (location.entryType) {
                 "Exit" -> "Location Exited"
@@ -62,8 +66,6 @@ class AlarmActivity : ComponentActivity() {
 
         }
 
-
-        alarmHelper = AlarmHelper.getInstance(this,locationDAO,contactDAO,sharedPreference)
 
         leftCircle = findViewById(R.id.leftCircle)
         rightCircle = findViewById(R.id.rightCircle)
@@ -89,14 +91,13 @@ class AlarmActivity : ComponentActivity() {
                         newX = newX.coerceIn(0f, centerToCenterX)
                         v.x = newX
 
-                        // Snap and hide arrows when reached
                         if (newX >= centerToCenterX - 5) {
                             v.x = centerToCenterX
                             arrowContainer.visibility = View.GONE
-                            v.isEnabled = false // optional to prevent further dragging
+                            v.isEnabled = false
 
                             alarmHelper.stopAlarm(locationId)
-                            Toast.makeText(this, "Alarm Stoped!", Toast.LENGTH_SHORT).show()
+                            finish()
                         }
 
                         true
@@ -110,6 +111,7 @@ class AlarmActivity : ComponentActivity() {
         findViewById<Button>(R.id.btn_snooze).setOnClickListener {
             alarmHelper.snoozeAlarm(1)
             alarmHelper.stopAlarm(locationId)
+            finish()
         }
         animateArrows()
     }

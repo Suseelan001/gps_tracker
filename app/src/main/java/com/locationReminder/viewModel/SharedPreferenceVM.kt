@@ -14,6 +14,23 @@ class SharedPreferenceVM @Inject constructor(private val mySharedPreference: MyS
         return !mySharedPreference.getUserId().isNullOrEmpty()
     }
 
+    fun getUserId(): String {
+        return mySharedPreference.getUserId() ?: ""
+    }
+
+    fun getExitListExists(): Boolean {
+        return mySharedPreference.getExitListExists() == true
+    }
+    fun setExitListExists(value: Boolean) {
+         mySharedPreference.setExitListExists(value)
+    }
+
+
+
+
+
+
+
 
 
 

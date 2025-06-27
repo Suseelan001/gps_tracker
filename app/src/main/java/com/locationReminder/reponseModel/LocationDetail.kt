@@ -15,5 +15,10 @@ data class LocationDetail(
     val lat: Double,
     val lng: Double,
     val sendNotification: Boolean=false,
-    val vibration: Boolean=true
+    val vibration: Boolean=true,
+    var category_title : String? = null,
+    var category_id : String? = null
+
+
+
 )

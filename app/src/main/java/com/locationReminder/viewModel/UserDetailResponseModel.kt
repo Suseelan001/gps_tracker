@@ -14,3 +14,6 @@ data class UserDetailResponseModel (
     @SerializedName("mobilenumber" ) var mobilenumber : String? = null
 
 )
+
+
+

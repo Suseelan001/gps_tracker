@@ -17,61 +17,48 @@ import androidx.core.app.NotificationCompat
 import com.locationReminder.MainActivity
 import com.locationReminder.roomDatabase.dao.LocationDAO
 import com.locationReminder.R
+import com.locationReminder.model.apiUtil.serviceModel.ApiService
 import com.locationReminder.model.localStorage.MySharedPreference
 import com.locationReminder.roomDatabase.dao.ContactDAO
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.lang.ref.WeakReference
 import javax.inject.Inject
 import java.text.SimpleDateFormat
 import java.util.*
+import javax.inject.Named
+import javax.inject.Singleton
 
 
+@Singleton
 class AlarmHelper @Inject constructor(
     @ApplicationContext private val context: Context,
     private val locationDAO: LocationDAO,
     private val contactDAO: ContactDAO,
-    private val mySharedPreference: MySharedPreference
-)
-
-{
-
-
+    private val mySharedPreference: MySharedPreference,
+    @Named("LOCATION_REMINDER_API_SERVICE") private val apiService: ApiService,
+    private val alarmAlertWindow: AlarmAlertWindow
+) {
     companion object {
-
-
         private var currentLocationId: Int? = null
         private var ringtone: Ringtone? = null
         private var vibrator: Vibrator? = null
         private var alarmIntent: PendingIntent? = null
-
-        private var instance: AlarmHelper? = null
         private const val NOTIFICATION_ID = 1001
+    }
+    private var currentActivity: WeakReference<Activity>? = null
 
-        fun getInstance(context: Context, locationDAO: LocationDAO, contactDAO: ContactDAO,mySharedPreference: MySharedPreference): AlarmHelper {
-            if (instance == null) {
-                instance = AlarmHelper(context.applicationContext, locationDAO,contactDAO,mySharedPreference)
-            }
-            return instance!!
-        }
-
-
+    fun setCurrentActivity(activity: Activity) {
+        currentActivity = WeakReference(activity)
     }
 
-
     @RequiresApi(Build.VERSION_CODES.O)
-    fun playAlarm(locationId: Int,address: String) {
-        currentLocationId?.let {
-            if (it == locationId) return
-            else stopAlarm(it)
-        }
-
-        currentLocationId?.let {
-            if (it != locationId) {
-                stopAlarm(it)
-            }
-        }
+    suspend fun playAlarm(locationId: Int, address: String) {
+        if (currentLocationId == locationId) return
+        stopAlarm(currentLocationId)
 
         val location = locationDAO.getSingleRecord(locationId)
         stopAlarm()
@@ -85,17 +72,20 @@ class AlarmHelper @Inject constructor(
             play()
         }
 
-        CoroutineScope(Dispatchers.IO).launch {
-            if (location.vibration == true) {
+        if (location.vibration == true) {
+            withContext(Dispatchers.Default) {
                 vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
                 val pattern = longArrayOf(0, 1000, 1000)
                 vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 0))
             }
         }
 
+        withContext(Dispatchers.Main) {
+            alarmAlertWindow.showWindow(context, locationId)
+        }
 
         if (location.sendNotification) {
-            sendSmsToAllContacts(mySharedPreference,contactDAO,address)
+            sendSmsToAllContacts(mySharedPreference, contactDAO, address)
         }
 
         val fullScreenIntent = Intent(context, AlarmActivity::class.java).apply {
@@ -104,19 +94,17 @@ class AlarmHelper @Inject constructor(
         }
 
         alarmIntent = PendingIntent.getActivity(
-            context,
-            0,
-            fullScreenIntent,
+            context, 0, fullScreenIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         showAlarmNotification(locationId)
-
         currentLocationId = locationId
     }
 
-
     fun stopAlarm(locationId: Int? = null) {
+
+
         ringtone?.stop()
         ringtone = null
 
@@ -127,19 +115,35 @@ class AlarmHelper @Inject constructor(
         notificationManager.cancel(NOTIFICATION_ID)
 
         if (locationId != null) {
-            launchMainActivity()
+            alarmAlertWindow.closeWindow()
+            val activity = currentActivity?.get()
+            if (activity is AlarmActivity) {
+                activity.finish()
+            }
+            //launchMainActivity()
             updateLocationStatusToFalse(locationId)
+
+            val status = locationDAO.isMarkerOfTypeExists(locationId, "Marker")
+            if (status == true) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val params = mapOf("currentStatus" to false)
+                        val response = apiService.updateMarkerStatus("eq.${locationId}", params)
+                        if (response.isSuccessful) {
+                            Log.d("AlarmHelper", "Marker status updated successfully.")
+                        } else {
+                            Log.e("AlarmHelper", "API failed: ${response.code()} - ${response.errorBody()?.string()}")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("AlarmHelper", "API exception: ${e.message}", e)
+                    }
+                }
+            }
         }
 
-        val intent = Intent("ACTION_STOP_LOCATION_UPDATES")
-        context.sendBroadcast(intent)
-
-
+        context.sendBroadcast(Intent("ACTION_STOP_LOCATION_UPDATES"))
         currentLocationId = null
     }
-
-
-
 
     private fun launchMainActivity() {
         val intent = Intent(context, MainActivity::class.java).apply {
@@ -155,18 +159,16 @@ class AlarmHelper @Inject constructor(
     }
 
     fun snoozeAlarm(minutes: Int) {
-
-
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val triggerTime = System.currentTimeMillis() + (minutes * 60 * 1000)
 
         val snoozeIntent = Intent(context, AlarmReceiver::class.java).apply {
             action = "ALARM_SNOOZE"
+            putExtra("isSnoozed", true)
         }
+
         val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            1,
-            snoozeIntent,
+            context, 1001, snoozeIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -175,20 +177,17 @@ class AlarmHelper @Inject constructor(
             triggerTime,
             pendingIntent
         )
+
         stopAlarm()
     }
 
     private fun showAlarmNotification(locationId: Int) {
         val location = locationDAO.getSingleRecord(locationId)
-
-        val notificationManager =
-            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                "alarm_channel",
-                "Alarm Channel",
-                NotificationManager.IMPORTANCE_HIGH
+                "alarm_channel", "Alarm Channel", NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Used for alarm notifications"
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
@@ -200,10 +199,9 @@ class AlarmHelper @Inject constructor(
             action = "STOP_ALARM"
             putExtra("location_id", locationId)
         }
+
         val stopPendingIntent = PendingIntent.getBroadcast(
-            context,
-            2,
-            stopIntent,
+            context, 2, stopIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -224,7 +222,9 @@ class AlarmHelper @Inject constructor(
             .build()
 
         notificationManager.notify(NOTIFICATION_ID, notification)
-    } }
+    }
+}
+
 
 fun sendSmsToAllContacts(mySharedPreference: MySharedPreference, contactDAO: ContactDAO,address: String) {
     CoroutineScope(Dispatchers.IO).launch {

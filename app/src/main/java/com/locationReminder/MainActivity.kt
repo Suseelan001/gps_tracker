@@ -9,13 +9,17 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.view.Window
+import android.provider.Telephony
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,33 +27,41 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.locationReminder.view.appNavigation.NavigationRoute
 import com.locationReminder.view.appNavigation.BottomBar
 import com.locationReminder.view.appNavigation.NavigationGraph
 import dagger.hilt.android.AndroidEntryPoint
-import androidx.core.graphics.toColorInt
 import com.locationReminder.roomDatabase.dao.ContactDAO
 import com.locationReminder.roomDatabase.dao.LocationDAO
 import javax.inject.Inject
-import androidx.core.net.toUri
 import com.locationReminder.model.apiUtil.serviceModel.LocationDaoEntryPoint
+import com.locationReminder.reponseModel.ImportedCategoryNameResponseModel
+import com.locationReminder.viewModel.AddImportedCategoryNameViewModel
+import com.locationReminder.viewModel.SharedPreferenceVM
 import dagger.hilt.android.EntryPointAccessors
-
+import kotlinx.coroutines.launch
+import androidx.core.net.toUri
+import com.locationReminder.view.BannerAd
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-
+    private val sharedPreferenceVM: SharedPreferenceVM by viewModels()
     @Inject
     lateinit var contactDAO: ContactDAO
-    @Inject lateinit var locationDao: LocationDAO
-    private var isHomeScreenLaunchedFirstTime = true
+    @Inject
+    lateinit var locationDao: LocationDAO
     private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
+    private lateinit var backgroundLocationLauncher: ActivityResultLauncher<String>
     private lateinit var locationSettingsLauncher: ActivityResultLauncher<Intent>
+    private val addImportedCategoryNameViewModel: AddImportedCategoryNameViewModel by viewModels()
+    private var haveImportedList = false
 
 
     private fun startLocationService() {
@@ -60,10 +72,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setStatusBarColor()
+
+        println("CHECK_TAG_Intent " + intent.data)
+       handleDeepLink(intent)
 
         val entryPoint = EntryPointAccessors.fromApplication(
             this.applicationContext,
@@ -78,9 +94,20 @@ class MainActivity : ComponentActivity() {
                 checkBackgroundLocationManually()
                 launchComposeUI()
             } else {
-                Toast.makeText(this, "Location is still disabled. Please enable it to continue.", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    this,
+                    "Location is still disabled. Please enable it to continue.",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
+
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
+
+
+
+
+
 
         permissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
@@ -91,7 +118,6 @@ class MainActivity : ComponentActivity() {
             } else {
                 true
             }
-
             if (locationGranted && notificationsGranted) {
                 if (isLocationEnabled()) {
                     checkBackgroundLocationManually()
@@ -99,15 +125,30 @@ class MainActivity : ComponentActivity() {
                 } else {
                     promptEnableLocation()
                 }
-            } else {
-                promptForBackgroundLocationPermission()
+            }
+        }
+
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            backgroundLocationLauncher = registerForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { isGranted ->
+                if (isGranted) {
+                    Toast.makeText(this, "Background location granted", Toast.LENGTH_SHORT).show()
+                    checkOverlayPermission()
+                } else {
+                    Toast.makeText(this, "Background location denied", Toast.LENGTH_SHORT).show()
+                    checkOverlayPermission()
+                }
             }
         }
 
         requestAllPermissions()
+        ensureDefaultSmsApp(this)
     }
+
     private fun isLocationEnabled(): Boolean {
-        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
@@ -118,11 +159,51 @@ class MainActivity : ComponentActivity() {
     }
 
 
-
     private fun launchComposeUI() {
         setContent {
             startLocationService()
             ComposeBaseFunction()
+
+        }
+    }
+
+    private fun handleDeepLink(intent: Intent?) {
+        if (sharedPreferenceVM.isUserLoggedIn()) {
+            val data = intent?.data
+            if (data != null && data.scheme == "myapp" && data.host == "imported_marker") {
+                val categoryFolderName = data.getQueryParameter("categoryFolderName")
+                val userId = data.getQueryParameter("user_id")
+                if (userId == sharedPreferenceVM.getUserId()) {
+                    Toast.makeText(this, "Import other user detail", Toast.LENGTH_SHORT).show()
+                    intent.data = null
+
+                    return
+                }
+
+                if (categoryFolderName != null && userId != null) {
+                    lifecycleScope.launch {
+                        val existingRecord = addImportedCategoryNameViewModel
+                            .isCategoryAlreadyExists(categoryFolderName, userId)
+                        if (existingRecord == null) {
+                            val newRecord = ImportedCategoryNameResponseModel(
+                                categoryName = categoryFolderName,
+                                userId = userId,
+                                firstTimeImport = true
+                            )
+                            addImportedCategoryNameViewModel.insertRecord(newRecord)
+
+                        } else {
+                            val updatedRecord = existingRecord.copy(firstTimeImport = true)
+                            addImportedCategoryNameViewModel.updateRecord(updatedRecord)
+                        }
+                        haveImportedList = true
+
+                    }
+                    intent.data = null
+
+                }
+
+            }
         }
     }
 
@@ -132,54 +213,97 @@ class MainActivity : ComponentActivity() {
         val buttonsVisible = remember { mutableStateOf(false) }
         var isBottomBarVisible by remember { mutableStateOf(false) }
 
-        navController.addOnDestinationChangedListener { _, destination, _ ->
-            val route = destination.route
-            buttonsVisible.value = listOf(
-                NavigationRoute.HOMESCREEN.path,
-                NavigationRoute.LEADSSCREEN.path,
-                NavigationRoute.FOLLOWSUPSCREEN.path,
-                NavigationRoute.SETTINGSSCREEN.path
-            ).contains(route)
-            if (route == NavigationRoute.HOMESCREEN.path) {
-                isHomeScreenLaunchedFirstTime = false
+        val startDestination = if (haveImportedList) {
+            NavigationRoute.FOLLOWSUPSCREEN.path
+        } else {
+            NavigationRoute.HOMESCREEN.path
+        }
+
+        var navGraphInitialized by remember { mutableStateOf(false) }
+
+        LaunchedEffect(navGraphInitialized, haveImportedList) {
+            if (navGraphInitialized) {
+                navController.navigate(startDestination) {
+                    popUpTo(0) { inclusive = true }
+                }
+                isBottomBarVisible = true
             }
         }
 
         LaunchedEffect(Unit) {
-            isBottomBarVisible = true
-        }
+            navController.addOnDestinationChangedListener { _, destination, _ ->
+                val route = destination.route
+                buttonsVisible.value = listOf(
+                    NavigationRoute.HOMESCREEN.path,
+                    NavigationRoute.LEADSSCREEN.path,
+                    NavigationRoute.FOLLOWSUPSCREEN.path,
+                    NavigationRoute.SETTINGSSCREEN.path
+                ).contains(route)
 
+            }
+        }
         Scaffold(
             bottomBar = {
-                if (isBottomBarVisible) {
-                    BottomBar(navController, buttonsVisible)
+                if (buttonsVisible.value) {
+                    Column {
+                        BannerAd(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp))
+
+                        BottomBar(
+                            navController = navController,
+                            state = buttonsVisible,
+                            modifier = Modifier.fillMaxWidth(),
+                            sharedPreferenceVM = sharedPreferenceVM,
+                            context = this@MainActivity
+                        )
+                    }
                 }
             }
-        ) { paddingValues ->
-            NavigationGraph(navController,paddingValues)
+        ) { padding ->
+            NavigationGraph(navController, padding)
+
+            LaunchedEffect(Unit) {
+                navGraphInitialized = true
+            }
         }
+
 
     }
 
+
     private fun requestAllPermissions() {
-        val permissions = mutableListOf<String>()
+        val mandatoryPermissions = mutableListOf<String>()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
         ) {
-            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+            mandatoryPermissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            mandatoryPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
         }
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
-            permissions.add(Manifest.permission.SEND_SMS)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                mandatoryPermissions.add(Manifest.permission.SEND_SMS)
+            }
         }
 
-        if (permissions.isNotEmpty()) {
-            permissionLauncher.launch(permissions.toTypedArray())
+
+        if (mandatoryPermissions.isNotEmpty()) {
+            permissionLauncher.launch(mandatoryPermissions.toTypedArray())
         } else {
             if (isLocationEnabled()) {
                 checkBackgroundLocationManually()
@@ -191,17 +315,20 @@ class MainActivity : ComponentActivity() {
     }
 
 
-
-
     private fun checkBackgroundLocationManually() {
         if (!isBackgroundLocationGranted()) {
             promptForBackgroundLocationPermission()
+        }else {
+            checkOverlayPermission()
         }
     }
 
     private fun isBackgroundLocationGranted(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) ==
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION
+            ) ==
                     PackageManager.PERMISSION_GRANTED
         } else true
     }
@@ -210,31 +337,61 @@ class MainActivity : ComponentActivity() {
         AlertDialog.Builder(this)
             .setTitle("Allow Background Location")
             .setMessage("To trigger geofence alarms even when the app is closed, please allow 'All the time' location in settings.")
-            .setPositiveButton("Go to Settings") { _, _ -> openAppSettings(this) }
+            .setPositiveButton("Go to Settings") { _, _ -> openAppSettings() }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
-    private fun openAppSettings(context: Context) {
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = "package:${context.packageName}".toUri()
+    private fun openAppSettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            backgroundLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        } else {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = "package:$packageName".toUri()
+            }
+            startActivity(intent)
         }
-        context.startActivity(intent)
-    }
-
-    private fun setStatusBarColor() {
-        window.statusBarColor = "#222227".toColorInt()
-        WindowCompat.setDecorFitsSystemWindows(window, true)
-        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
     }
 
 
+    private fun checkOverlayPermission() {
+        if (!Settings.canDrawOverlays(this)) {
+            showOverlayPermissionDialog()
+        }
+    }
+
+
+    private fun showOverlayPermissionDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Allow Overlay Permission")
+            .setMessage("This permission is required to display alarms and alerts over other apps.")
+            .setPositiveButton("Grant") { _, _ ->
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    "package:$packageName".toUri()
+                )
+                startActivity(intent)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
 
 
 
 }
 
 
+
+fun ensureDefaultSmsApp(context: Context) {
+    val myPackageName = context.packageName
+    val defaultSmsPackage = Telephony.Sms.getDefaultSmsPackage(context)
+
+    if (defaultSmsPackage != myPackageName) {
+        val intent = Intent(Telephony.Sms.Intents.ACTION_CHANGE_DEFAULT)
+        intent.putExtra(Telephony.Sms.Intents.EXTRA_PACKAGE_NAME, myPackageName)
+        context.startActivity(intent)
+    }
+}
 
 
 

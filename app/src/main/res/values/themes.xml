@@ -4,4 +4,12 @@
     <style name="Theme.LocationReminder" parent="android:Theme.Material.Light.NoActionBar">
 
     </style>
+
+
+    <style name="Theme.MyApp.FullScreen" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+
 </resources>

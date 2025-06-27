@@ -16,23 +16,27 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
 
 
     <uses-feature
         android:name="android.hardware.telephony"
         android:required="false" />
-
+    <uses-feature
+        android:name="android.hardware.sms"
+        android:required="true" />
 
     <application
         android:name=".hilt.MyApplication"
-        android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:allowBackup="false"
         android:theme="@style/Theme.LocationReminder"
         tools:targetApi="31">
 
@@ -42,23 +46,30 @@
             android:theme="@style/Theme.LocationReminder">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-                <data android:scheme="tel" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="myapp" android:host="imported_marker"/>
             </intent-filter>
 
         </activity>
+
+
         <activity
             android:name=".alarmModel.AlarmActivity"
-            android:showOnLockScreen="true"
+            android:exported="true"
+            android:launchMode="singleTop"
             android:showWhenLocked="true"
-            android:turnScreenOn="true">
+            android:turnScreenOn="true"
+            android:showOnLockScreen="true"
+            android:theme="@style/Theme.MyApp.FullScreen">
 
-        </activity>
+
+    </activity>
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
@@ -67,7 +78,8 @@
 
         <receiver
             android:name="com.locationReminder.alarmModel.AlarmReceiver"
-            android:exported="true" />
+            android:exported="true"
+            />
 
 
 
@@ -81,7 +93,9 @@
             android:enabled="true"
             android:exported="false" />
 
-
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
 
     </application>
 

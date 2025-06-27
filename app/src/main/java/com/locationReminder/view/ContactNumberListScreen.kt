@@ -88,11 +88,7 @@ fun ContactNumberListScreen(
 
 
 
-    SideEffect {
-        val window = (context as Activity).window
-        window.statusBarColor = "#222227".toColorInt()
-        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
-    }
+
 
     Scaffold(
         topBar = {

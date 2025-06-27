@@ -11,6 +11,18 @@ import com.locationReminder.reponseModel.SettingsData
 @Dao
 interface SettingsDAO {
 
+
+
+    @Query("SELECT * FROM settings_data_dao LIMIT 1")
+    fun getSettings(): LiveData<SettingsData?>
+
+    @Query("SELECT * FROM settings_data_dao LIMIT 1")
+    suspend fun getSettingsOnce(): SettingsData?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(data: SettingsData)
+
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRecord(task: SettingsData)
 

@@ -6,21 +6,18 @@ import android.content.Intent
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.locationReminder.model.apiUtil.serviceModel.LocationDaoEntryPoint
-import com.locationReminder.viewModel.SharedPreferenceVM
 import dagger.hilt.android.EntryPointAccessors
 
 class AlarmReceiver : BroadcastReceiver() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onReceive(context: Context, intent: Intent) {
+
         val entryPoint = EntryPointAccessors.fromApplication(
             context.applicationContext,
             LocationDaoEntryPoint::class.java
         )
-        val locationDao = entryPoint.locationDao()
-        val contactDAO = entryPoint.contactDAO()
-        val sharedPreference = entryPoint.mySharedPreference()
+        val alarmHelper = entryPoint.alarmHelper()
 
-        val alarmHelper = AlarmHelper.getInstance(context, locationDao,contactDAO,sharedPreference)
 
         when (intent.action) {
             "ALARM_SNOOZE", "SNOOZE_ALARM" -> {
@@ -29,12 +26,12 @@ class AlarmReceiver : BroadcastReceiver() {
 
             "STOP_ALARM" -> {
                 val locationId = intent.getIntExtra("location_id", -1)
-
                 alarmHelper.stopAlarm(if (locationId != -1) locationId else null)
             }
         }
     }
 }
+
 
 
 

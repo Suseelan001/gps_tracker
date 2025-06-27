@@ -1,9 +1,13 @@
 [versions]
 accompanistSystemuicontroller = "0.34.0"
+accompanistSystemuicontrollerVersion = "0.32.0"
 agp = "8.7.3"
 coilCompose = "2.7.0"
 constraintlayoutCompose = "1.1.0"
 converterGson = "2.11.0"
+firebaseBom = "33.16.0"
+googleAccompanistSystemuicontroller = "<version>"
+googleAccompanistSystemuicontrollerVersion = "0.34.0-alpha"
 hiltAndroid = "2.51.1"
 hiltAndroidCompiler = "2.51.1"
 hiltNavigationCompose = "1.2.0"
@@ -24,26 +28,35 @@ mapsCompose = "2.11.4"
 material = "1.12.0"
 navigationCompose = "2.8.5"
 places = "4.2.0"
+playServicesAds = "24.4.0"
 playServicesLocation = "21.3.0"
 playServicesMaps = "19.2.0"
 retrofit = "2.11.0"
+roomCompiler = "2.7.2"
 roomKtx = "2.7.1"
 roomRuntime = "2.7.1"
 runtimeLivedata = "1.8.0"
 
 [libraries]
 accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller" }
+accompanist-systemuicontroller-v0320 = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "accompanistSystemuicontrollerVersion" }
+accompanist-systemuicontroller-v0340alpha = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "googleAccompanistSystemuicontrollerVersion" }
+accompanist-systemuicontroller-vversion = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "googleAccompanistSystemuicontroller" }
 androidx-constraintlayout-compose = { module = "androidx.constraintlayout:constraintlayout-compose", version.ref = "constraintlayoutCompose" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 androidx-lifecycle-livedata-runtime = { module = "androidx.lifecycle:lifecycle-livedata-runtime", version.ref = "lifecycleLivedataRuntime" }
 androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycleProcess" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomCompiler" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomKtx" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
 androidx-runtime-livedata = { module = "androidx.compose.runtime:runtime-livedata", version.ref = "runtimeLivedata" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
+com-google-accompanist-accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 google-accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "accompanistSystemuicontroller" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
 hilt-android-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hiltAndroidCompiler" }
@@ -67,6 +80,7 @@ maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = 
 material = { module = "com.google.android.material:material", version.ref = "material" }
 navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 places = { module = "com.google.android.libraries.places:places", version.ref = "places" }
+play-services-ads = { module = "com.google.android.gms:play-services-ads", version.ref = "playServicesAds" }
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }

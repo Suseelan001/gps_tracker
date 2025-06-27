@@ -1,7 +1,6 @@
 package com.locationReminder.view
 
 import android.Manifest
-import android.app.Activity
 import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -11,7 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,15 +25,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.toColorInt
-import androidx.core.view.WindowCompat
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.google.gson.Gson
 import com.locationReminder.reponseModel.ContactDetail
@@ -44,24 +40,33 @@ import com.locationReminder.ui.theme.Hex222227
 import com.locationReminder.ui.theme.RobotoMediumWithHexFFFFFF18sp
 import com.locationReminder.ui.theme.RobotoRegularWithHexHex80808016sp
 import com.locationReminder.viewModel.AddContactViewModel
+import com.locationReminder.viewModel.AddLocationViewModel
+import com.locationReminder.viewModel.SharedPreferenceVM
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun AddContactNumberScreen(
     navController: NavHostController,
-    viewModel: AddContactViewModel
+    viewModel: AddContactViewModel,
+    sharedPreferenceVM: SharedPreferenceVM,
+    addLocationViewModel: AddLocationViewModel
+
 ) {
     val context = LocalContext.current
     val contacts by viewModel.deviceContacts.collectAsState()
     val savedContacts by viewModel.getAllRecord().observeAsState(emptyList())
+    var showDialog by remember { mutableStateOf(false) }
 
     var permissionGranted by remember { mutableStateOf(false) }
     val selectedContacts = remember { mutableStateListOf<ContactDetailLocal>() }
     var showContactList by remember { mutableStateOf(false) }
     var hasLoadedInitially by remember { mutableStateOf(false) }
+    var showDialogForContact by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
+    val getAccountList by addLocationViewModel.getAllRecord().observeAsState(emptyList())
+    val exitList = getAccountList.filter { it.entryType.equals("Exit", ignoreCase = true) }
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -75,6 +80,8 @@ fun AddContactNumberScreen(
             Toast.makeText(context, "Permission denied", Toast.LENGTH_SHORT).show()
         }
     }
+
+
 
     LaunchedEffect(Unit) {
         if (ContextCompat.checkSelfPermission(
@@ -107,18 +114,39 @@ fun AddContactNumberScreen(
         }
     }
 
-    SideEffect() {
-        val window = (context as Activity).window
-        window.statusBarColor = "#222227".toColorInt()
-        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
-            false
+
+        if(savedContacts.isEmpty()){
+            if (exitList.isNotEmpty()){
+                showDialogForContact=true
+            }
+        }
+
+
+    if (showDialog) {
+        EditContact(
+            onDismiss = {
+                sharedPreferenceVM.setExitListExists(false)
+                handleContactsUpdate(selectedContacts, viewModel, navController)
+                showDialog = false
+            },
+            onConfirmLogout = {
+                sharedPreferenceVM.setExitListExists(false)
+                viewModel.enableNotificationsForExitType()
+                handleContactsUpdate(selectedContacts, viewModel, navController)
+                showDialog = false
+            }
+        )
     }
 
+
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
-            .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
-            focusManager.clearFocus()
-        },
+        modifier = Modifier
+            .nestedScroll(scrollBehavior.nestedScrollConnection)
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }) {
+                focusManager.clearFocus()
+            },
         topBar = {
             LargeTopAppBar(
                 title = {
@@ -130,16 +158,16 @@ fun AddContactNumberScreen(
                 actions = {
                     if (selectedContacts.isNotEmpty()) {
                         TextButton(onClick = {
-                            viewModel.clearUserDB()
-                            selectedContacts.forEach { contact ->
-                                viewModel.insertRecord(
-                                    ContactDetail(
-                                        name = contact.name,
-                                        mobileNumber = contact.mobileNumber
-                                    )
-                                )
+                            if (showDialogForContact){
+                                showDialog=true
+
+                            }else{
+                                handleContactsUpdate(selectedContacts, viewModel, navController)
+
                             }
-                            navController.popBackStack()
+
+
+
                         }) {
                             if (hasLoadedInitially) {
                                 Text("Add", color = Color.White)
@@ -159,7 +187,10 @@ fun AddContactNumberScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Hex222227)
-                .padding(padding)
+                .padding(top = padding.calculateTopPadding())
+                .padding(bottom = 50.dp)
+
+
         ) {
             if (permissionGranted) {
                 if (showContactList) {
@@ -176,10 +207,13 @@ fun AddContactNumberScreen(
                         it.name.firstOrNull()?.uppercaseChar() ?: '#'
                     }
 
-                    Column(modifier = Modifier.fillMaxSize()
-                        .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
-                        focusManager.clearFocus()
-                    }) {
+                    Column(modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }) {
+                            focusManager.clearFocus()
+                        }) {
 
 
                         OutlinedTextField(
@@ -210,7 +244,6 @@ fun AddContactNumberScreen(
                             state = listState,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(bottom = 10.dp)
                         ) {
                             if (selectedContacts.isNotEmpty()) {
                                 item {
@@ -277,7 +310,47 @@ fun AddContactNumberScreen(
         }
     }
 }
+private fun handleContactsUpdate(
+    selectedContacts: List<ContactDetailLocal>,
+    viewModel: AddContactViewModel,
+    navController: NavController
+) {
+    viewModel.clearUserDB()
+    selectedContacts.forEach { contact ->
+        viewModel.insertRecord(
+            ContactDetail(
+                name = contact.name,
+                mobileNumber = contact.mobileNumber
+            )
+        )
+    }
+    navController.popBackStack()
+}
 
+
+
+
+@Composable
+fun EditContact(
+    onDismiss: () -> Unit,
+    onConfirmLogout: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "Add") },
+        text = { Text(text = "Send message to all these contacts") },
+        confirmButton = {
+            TextButton(onClick = onConfirmLogout) {
+                Text("Yes")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("No")
+            }
+        }
+    )
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

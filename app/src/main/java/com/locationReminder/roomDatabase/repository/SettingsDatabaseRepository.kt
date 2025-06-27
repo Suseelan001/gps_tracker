@@ -18,11 +18,15 @@ class SettingsDatabaseRepository @Inject constructor(
     private val settingsDAO: SettingsDAO
 ) {
 
-    suspend fun insertRecord(task: SettingsData) {
-        withContext(Dispatchers.IO) {
-            settingsDAO.insertRecord(task)
-        }
+    fun getSettings(): LiveData<SettingsData?> = settingsDAO.getSettings()
+
+    suspend fun getSettingsOnce(): SettingsData? = settingsDAO.getSettingsOnce()
+
+    suspend fun insertRecord(data: SettingsData) {
+        settingsDAO.insertRecord(data)
     }
+
+
 
 
     suspend fun clearUserDB() {

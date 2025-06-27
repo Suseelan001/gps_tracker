@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.locationReminder.reponseModel.ContactDetail
 import com.locationReminder.reponseModel.ContactDetailLocal
 import com.locationReminder.roomDatabase.repository.AddContactDatabaseRepository
+import com.locationReminder.roomDatabase.repository.AddLocationDatabaseRepository
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 @HiltViewModel
 class AddContactViewModel @Inject constructor(
     private val addContactDatabaseRepository: AddContactDatabaseRepository,
+    private val addLocationDatabaseRepository: AddLocationDatabaseRepository,
     application: Application
 ) : AndroidViewModel(application) {
 
@@ -36,6 +38,13 @@ class AddContactViewModel @Inject constructor(
         }
     }
 
+
+    fun enableNotificationsForExitType() {
+        viewModelScope.launch {
+            addLocationDatabaseRepository.enableNotificationsForExitType()
+        }
+    }
+
     fun clearUserDB() {
         viewModelScope.launch {
             addContactDatabaseRepository.clearUserDB()
@@ -49,7 +58,7 @@ class AddContactViewModel @Inject constructor(
     fun loadDeviceContacts() {
         val context = getApplication<Application>().applicationContext
         val contentResolver = context.contentResolver
-        val contactSet = mutableSetOf<String>() // To track unique numbers
+        val contactSet = mutableSetOf<String>()
         val uniqueContacts = mutableListOf<ContactDetailLocal>()
 
         val cursor = contentResolver.query(
@@ -64,7 +73,7 @@ class AddContactViewModel @Inject constructor(
             while (it.moveToNext()) {
                 val name = it.getString(nameIndex) ?: ""
                 val number = it.getString(numberIndex)?.replace(" ", "") ?: ""
-                val normalizedNumber = number.filter { it.isDigit() } // Optional: filter only digits
+                val normalizedNumber = number.filter { it.isDigit() }
 
                 if (normalizedNumber !in contactSet) {
                     contactSet.add(normalizedNumber)

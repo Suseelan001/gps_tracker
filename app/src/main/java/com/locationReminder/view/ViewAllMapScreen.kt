@@ -1,40 +1,40 @@
 package com.locationReminder.view
 
+
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Location
-import android.util.Log
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import com.locationReminder.ui.theme.Hex095d7f
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.navigation.NavHostController
-import com.locationReminder.reponseModel.LocationDetail
-import com.locationReminder.viewModel.AddLocationViewModel
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.gson.Gson
 import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
@@ -42,172 +42,247 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.locationReminder.R
+import com.locationReminder.viewModel.AddLocationViewModel
+import com.locationReminder.viewModel.PlacesClientManager
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 @Composable
-fun ViewAllMapScreen(navHostController:NavHostController,addLocationViewModel: AddLocationViewModel,type: String
+fun ViewAllMapScreen(
+    navHostController: NavHostController,
+    type: String,
+    categoryId: String,
+    addLocationViewModel: AddLocationViewModel
 ) {
-    val context = LocalContext.current
-
-    val getAccountList by addLocationViewModel.getAllRecord().observeAsState(emptyList())
-    val entryList = getAccountList.filter { it.entryType == type }
-
-    if (entryList.isNotEmpty()){
-        GeofenceMapApp(context, navHostController, entryList,type)
-
+    SetStatusBarStyle()
+    var showMap by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(200)
+        showMap = true
     }
-
-  /*  LaunchedEffect(getAccountList) {
-        val geofencingClient = LocationServices.getGeofencingClient(context)
-
-        for (item in getAccountList) {
-            val geofence = Geofence.Builder()
-                .setRequestId(item.id.toString())
-                .setCircularRegion(
-                    item.lat,
-                    item.lng,
-                    item.radius.toFloat()
-                )
-                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
-                .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                .build()
-
-            val geofencingRequest = GeofencingRequest.Builder()
-                .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
-                .addGeofence(geofence)
-                .build()
-
-            val geofencePendingIntent = PendingIntent.getBroadcast(
-                context,
-                0,
-                Intent(context, GeofenceBroadcastReceiver::class.java),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-
-            if (ActivityCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                geofencingClient.addGeofences(geofencingRequest, geofencePendingIntent)
-                    .addOnSuccessListener {
-                        Log.d("Geofence", "Added geofence for item ${item.id}")
-                    }
-                    .addOnFailureListener {
-                        Log.e("Geofence", "Failed to add geofence", it)
-                    }
-            }
-        }
-    }*/
-
-
+    if (showMap) {
+        MapHomeScreenViewAllMap(navHostController, type,categoryId,addLocationViewModel)
+    }
 }
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GeofenceMapApp(
-    context: Context,
+fun MapHomeScreenViewAllMap(
     navHostController: NavHostController,
-    locationList: List<LocationDetail>,
-    type: String
-) {
-    val geofencingClient = remember { LocationServices.getGeofencingClient(context) }
-    val cameraPositionState = rememberCameraPositionState()
-    val geofenceRadius = remember { mutableDoubleStateOf(50.0) }
-    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
-    val currentLocation = remember { mutableStateOf<LatLng?>(null) }
+    type: String,categoryId:String,addLocationViewModel: AddLocationViewModel)
+{
+
+    val context = LocalContext.current
+    var currentLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var markerPosition by remember { mutableStateOf<LatLng?>(null) }
+    var circleRadius by remember { mutableFloatStateOf(100f) }
+    val coroutineScope = rememberCoroutineScope()
+
+
+    val getAccountList by addLocationViewModel.getAllRecord().observeAsState(emptyList())
+
+    val entryList = if (categoryId.isNotEmpty()) {
+        getAccountList.filter {
+            it.entryType.equals(type, ignoreCase = true) &&
+                    it.category_id == categoryId
+        }
+    } else {
+        getAccountList.filter {
+            it.entryType.equals(type, ignoreCase = true)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            PlacesClientManager.shutdown()
+        }
+    }
+    BackHandler(enabled = true) {
+        navHostController.popBackStack()
+    }
+
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            getCurrentLocation(context) { location ->
+                currentLocation = location
+                isLoading = false
+            }
+        } else {
+            isLoading = false
+        }
+    }
+
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(LatLng(0.0, 0.0), 10f)
+    }
 
     LaunchedEffect(Unit) {
-        if (ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                location?.let {
-                    // Log current location for debugging
-                    Log.d("LocationDebug", "Current Location: ${it.latitude}, ${it.longitude}")
-
-                    val latLng = LatLng(it.latitude, it.longitude)
-                    currentLocation.value = latLng
-                    cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
-
-
-                    locationList.forEach { locationDetail ->
-
-                        val currentLoc = Location("current")
-                        currentLoc.latitude = it.latitude
-                        currentLoc.longitude = it.longitude
-
-                        val latLngDestination = LatLng(locationDetail.lat, locationDetail.lng)
-                        Log.d("LocationDebug", "locationDetail Location: ${locationDetail.lat}, ${ locationDetail.lng}")
-
-                        val destination = Location("destination")
-                        destination.latitude = latLngDestination.latitude
-                        destination.longitude = latLngDestination.longitude
-
-                        Log.d("LocationDebug", "Destination Location:  - Lat: ${destination.latitude}, Lng: ${destination.longitude}")
-
-                        val distance = currentLoc.distanceTo(destination)
-                        Log.d("LocationDistance", "Distance to : $distance meters")
-                    }
+        when {
+            ActivityCompat.checkSelfPermission(
+                context, Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                getCurrentLocation(context) { location ->
+                    currentLocation = location
+                    isLoading = false
                 }
             }
+
+            else -> requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            TopAppBar(
-                title = { Text("On $type List") },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        navHostController.popBackStack()
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                actions = {
-                    // You can keep other actions here if needed
-                },
-                colors = TopAppBarDefaults.mediumTopAppBarColors(
-                    containerColor = Hex095d7f
+    LaunchedEffect(currentLocation) {
+            currentLocation?.let {
+                cameraPositionState.position = CameraPosition.fromLatLngZoom(
+                    LatLng(it.first, it.second), 15f
                 )
-            )
+            }
+    }
 
-            GoogleMap(
-                uiSettings = MapUiSettings(
-                    zoomControlsEnabled = false,
-                    myLocationButtonEnabled = false
-                ),
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState,
-                properties = MapProperties(isMyLocationEnabled = true)
-            ) {
-                locationList.forEach { location ->
-                    val latLng = LatLng(location.lat, location.lng)
 
-                    Marker(
-                        state = MarkerState(position = latLng),
-                        title =" location.locationName",
-                        snippet = "Radius: ${location.radius}m"
-                    )
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                        Box(Modifier.fillMaxSize()) {
+                                LaunchedEffect(markerPosition) {
+                                    markerPosition?.let {
+                                        cameraPositionState.animate(
+                                            update = CameraUpdateFactory.newLatLngZoom(it, 15f)
+                                        )
+                                    }
+                                }
+                            GoogleMap(
+                                modifier = Modifier.matchParentSize(),
+                                cameraPositionState = cameraPositionState,
+                                properties = MapProperties(isMyLocationEnabled = true),
+                                uiSettings = MapUiSettings(
+                                    zoomControlsEnabled = false,
+                                    myLocationButtonEnabled = false
+                                ),
+                                onMapClick = { latLng -> }
+                            ) {
+                                // Optional: Individual marker and circle (e.g., selected marker)
+                                markerPosition?.let {
+                                    Marker(state = MarkerState(position = it))
+                                    Circle(
+                                        center = it,
+                                        radius = circleRadius.toDouble(),
+                                        strokeColor = Color.Blue,
+                                        strokeWidth = 2f,
+                                        fillColor = Color(0x330000FF)
+                                    )
+                                }
 
-                    Circle(
-                        center = latLng,
-                        radius = location.radius.toDouble(),
-                        strokeColor = Color.Red,
-                        fillColor = Color.Red.copy(alpha = 0.2f)
-                    )
+                                // ✅ All entryList markers with circle
+                                entryList.forEach { record ->
+                                    val lat = record.lat
+                                    val lng = record.lng
+                                    if (lat != null && lng != null) {
+                                        val latLng = LatLng(lat, lng)
+
+                                        Marker(
+                                            state = MarkerState(position = latLng),
+                                            title = record.title ?: "",
+                                        )
+
+                                        Circle(
+                                            center = latLng,
+                                            radius = record.radius.toDouble(),
+                                            strokeColor = if (record.entryType =="Exit") Color.Red else Color.Blue,
+                                            strokeWidth = 2f,
+                                            fillColor =if (record.entryType =="Exit")  Color(0x22FF0000) else Color(0x330000FF)
+                                        )
+                                    }
+                                }
+                            }
+
+
+
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(end = 16.dp, bottom = 180.dp),
+                                verticalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                FloatingActionButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            val fusedLocationClient =
+                                                LocationServices.getFusedLocationProviderClient(
+                                                    context
+                                                )
+                                            val location = fusedLocationClient.lastLocation.await()
+                                            location?.let {
+                                                val currentLatLng =
+                                                    LatLng(it.latitude, it.longitude)
+                                                cameraPositionState.animate(
+                                                    CameraUpdateFactory.newLatLngZoom(
+                                                        currentLatLng,
+                                                        15f
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    },
+                                    containerColor = Color.White,
+                                    contentColor = Color.Black,
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.focus_current_location),
+                                        contentDescription = "Go to current location"
+                                    )
+                                }
+
+                                FloatingActionButton(
+                                    onClick = {
+                                        val currentZoom = cameraPositionState.position.zoom
+                                        coroutineScope.launch {
+                                            cameraPositionState.animate(
+                                                CameraUpdateFactory.zoomTo(currentZoom + 1f)
+                                            )
+                                        }
+                                    },
+                                    containerColor = Color.White,
+                                    contentColor = Color.Black,
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.plus),
+                                        contentDescription = "Zoom In"
+                                    )
+                                }
+
+                                FloatingActionButton(
+                                    onClick = {
+                                        val currentZoom = cameraPositionState.position.zoom
+                                        coroutineScope.launch {
+                                            cameraPositionState.animate(
+                                                CameraUpdateFactory.zoomTo(currentZoom - 1f)
+                                            )
+                                        }
+                                    },
+                                    containerColor = Color.White,
+                                    contentColor = Color.Black,
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.minus),
+                                        contentDescription = "Zoom Out",
+                                        tint = Color.Black,
+                                        modifier = Modifier.padding(3.dp)
+                                    )
+                                }
+
+                            }
+                        }
                 }
             }
         }
-    }
 }
-
-
 
 
