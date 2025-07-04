@@ -1,6 +1,5 @@
 package com.locationReminder.viewModel
 
-import android.widget.Toast
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -31,6 +30,13 @@ class LoginVM @Inject constructor(
 
     private val _loading = MutableLiveData<Boolean>()
     val loading: LiveData<Boolean> get() = _loading
+
+    private val _successMessage = MutableLiveData<String?>()
+    val successMessage: LiveData<String?> get() = _successMessage
+
+      fun getAllRecord(): UserDetailResponseModel {
+        return userDatabaseRepository.getUserDetail()
+    }
 
 
     fun callSignUp(
@@ -128,10 +134,65 @@ class LoginVM @Inject constructor(
 
 
 
+    fun updateUserLogin(
+        userId: String,
+        email: String,
+        password: String,
+        name: String,
+        mobileNumber: String,
+
+    ) = viewModelScope.launch {
+        val params = mutableMapOf<String, Any>()
+        params["password"] = password
+        params["username"] = name
+        params["mobilenumber"] = mobileNumber
+
+        _loading.postValue(true)
+
+        when (val result = baseNetworkCall.updateUserLogin("eq.$email",params)) {
+            is NetworkResult.Success -> {
+
+                    val localLocations = addLocationDatabaseRepository.getAllRecordsNow()
+                    if (localLocations.isNotEmpty()) {
+                        mySharedPreference.setExitListExists(true)
+                    }
+
+                    mySharedPreference.saveUserId(userId)
+                    mySharedPreference.saveUserName(name)
+                userDatabaseRepository.clearUserDB()
+                val userData= UserDetailResponseModel(
+                    id=userId.toInt(),
+                    userMail=email,
+                    username=name,
+                    mobilenumber=mobileNumber
+                )
+                    userDatabaseRepository.insertUser(userData)
+                _successMessage.value="Login updated"
+
+
+                _loading.postValue(false)
+            }
+
+            is NetworkResult.Error -> {
+                _errorMessage.postValue(result.message ?: "Something went wrong")
+                _loading.postValue(false)
+            }
+
+            is NetworkResult.Loading -> {
+                _loading.postValue(true)
+            }
+        }
+    }
+
+
+
     fun clearErrorMessage(){
         _errorMessage.postValue(null)
 
     }
+
+    fun clearSuccessMessage() { _successMessage.value = null }
+
 }
 
 

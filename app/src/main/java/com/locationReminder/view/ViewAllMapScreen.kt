@@ -34,7 +34,6 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.google.gson.Gson
 import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
@@ -180,7 +179,6 @@ fun MapHomeScreenViewAllMap(
                                     )
                                 }
 
-                                // ✅ All entryList markers with circle
                                 entryList.forEach { record ->
                                     val lat = record.lat
                                     val lng = record.lng
@@ -189,7 +187,7 @@ fun MapHomeScreenViewAllMap(
 
                                         Marker(
                                             state = MarkerState(position = latLng),
-                                            title = record.title ?: "",
+                                            title = record.title,
                                         )
 
                                         Circle(

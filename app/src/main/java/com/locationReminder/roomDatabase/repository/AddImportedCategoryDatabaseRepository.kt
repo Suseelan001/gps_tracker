@@ -28,10 +28,10 @@ class AddImportedCategoryDatabaseRepository @Inject constructor(
     suspend fun updateRecordStatus(id: Int, status: Boolean) {
         folderNameDAO.updateRecordStatus(id, status)
     }
-
-    suspend fun updateRecordId(id: Int, categoryName: String) {
-        folderNameDAO.updateRecordId(id, categoryName)
+    suspend fun updateShowImportStatus(id: Int, status: Boolean) {
+        folderNameDAO.updateShowImportStatus(id, status)
     }
+
 
     fun deleteSingleRecord(id: Int){
         folderNameDAO.deleteSingleRecord(id)

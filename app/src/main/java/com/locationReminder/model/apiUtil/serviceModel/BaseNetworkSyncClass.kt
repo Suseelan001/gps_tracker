@@ -4,6 +4,7 @@ import com.locationReminder.model.apiUtil.utils.BaseApiResponse
 import com.locationReminder.model.apiUtil.utils.NetworkResult
 import com.locationReminder.reponseModel.CategoryFolderResponseModel
 import com.locationReminder.reponseModel.LocationDetail
+import com.locationReminder.reponseModel.MarkerUpdateRequest
 import com.locationReminder.viewModel.UserDetailResponseModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +36,13 @@ class BaseNetworkSyncClass @Inject constructor(
             }
         }
     }
+    suspend fun updateUserLogin(mail: String,map: Map<String, Any>): NetworkResult<ResponseBody> {
+        return withContext(Dispatchers.Default) {
+            safeApiCall {
+                apiService.updateUserLogin(mail,map)
+            }
+        }
+    }
 
     suspend fun addMarkerList(map: Map<String, Any>): NetworkResult<List<LocationDetail>> {
         return withContext(Dispatchers.Default) {
@@ -53,10 +61,18 @@ class BaseNetworkSyncClass @Inject constructor(
         }
     }
 
-    suspend fun getImportedMarkerList(categoryTitle: String,userId: String): NetworkResult<List<LocationDetail>> {
+    suspend fun getImportedMarkerList(categoryId: String,userId: String): NetworkResult<List<LocationDetail>> {
         return withContext(Dispatchers.Default) {
             safeApiCall {
-                apiService.getImportedMarkerList(categoryTitle,userId)
+                apiService.getImportedMarkerList(categoryId,userId)
+            }
+        }
+    }
+
+    suspend fun updateMarkers(updatedList: List<MarkerUpdateRequest>): NetworkResult<List<LocationDetail>> {
+        return withContext(Dispatchers.Default) {
+            safeApiCall {
+                apiService.updateMarkers(updatedList)
             }
         }
     }
@@ -80,10 +96,10 @@ class BaseNetworkSyncClass @Inject constructor(
         }
     }
 
-    suspend fun deleteMarker(id: String): NetworkResult<ResponseBody> {
+    suspend fun deleteMarkerList(id: String): NetworkResult<ResponseBody> {
         return withContext(Dispatchers.Default) {
             safeApiCall {
-                apiService.deleteMarker(id)
+                apiService.deleteMarkerList(id)
             }
         }
     }

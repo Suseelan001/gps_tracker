@@ -1,16 +1,15 @@
 package com.locationReminder.viewModel
 
 import android.util.Log
-import androidx.compose.animation.scaleOut
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.gson.Gson
 import com.locationReminder.model.apiUtil.serviceModel.BaseNetworkSyncClass
 import com.locationReminder.model.apiUtil.utils.NetworkResult
 import com.locationReminder.model.localStorage.MySharedPreference
 import com.locationReminder.reponseModel.LocationDetail
+import com.locationReminder.reponseModel.MarkerUpdateRequest
 import com.locationReminder.roomDatabase.repository.AddImportedCategoryDatabaseRepository
 import com.locationReminder.roomDatabase.repository.AddLocationDatabaseRepository
 import kotlinx.coroutines.launch
@@ -32,8 +31,6 @@ class AddLocationViewModel @Inject constructor(
     val locationDetail: LiveData<List<LocationDetail>> get() = _locationDetail
 
 
-    private val _errorMessage = MutableLiveData<String?>()
-    val errorMessage: LiveData<String?> get() = _errorMessage
 
     private val _successMessage = MutableLiveData<String?>()
     val successMessage: LiveData<String?> get() = _successMessage
@@ -108,24 +105,18 @@ class AddLocationViewModel @Inject constructor(
         params["vibration"] = vibration
         params["category_id"] = categoryId
         params["category_title"] = categoryTitle
-
-
-
         mySharedPreference.getUserId()?.toIntOrNull()?.let {
             params["user_id"] = it
-        } ?: run {
-            Log.e("Supabase", "User ID is null or invalid")
         }
         _loading.postValue(true)
 
-        when (val result = baseNetworkCall.addMarkerList(params)) {
+        when (baseNetworkCall.addMarkerList(params)) {
             is NetworkResult.Success -> {
                 _successMessage.value="Marker added successfully"
                 _loading.postValue(false)
             }
 
             is NetworkResult.Error -> {
-                _errorMessage.postValue(result.message ?: "Something went wrong")
                 _loading.postValue(false)
             }
 
@@ -143,7 +134,7 @@ class AddLocationViewModel @Inject constructor(
         params["currentStatus"] = currentStatus
         _loading.postValue(true)
 
-        when (val result = baseNetworkCall.updateMarkerStatus(itemId,params)) {
+        when (baseNetworkCall.updateMarkerStatus(itemId,params)) {
             is NetworkResult.Success -> {
                 val itemId = itemId.removePrefix("eq.").toInt()
                 updateCurrentStatus(itemId.toInt(),currentStatus )
@@ -152,7 +143,6 @@ class AddLocationViewModel @Inject constructor(
             }
 
             is NetworkResult.Error -> {
-                _errorMessage.postValue(result.message ?: "Something went wrong")
                 _loading.postValue(false)
             }
 
@@ -197,13 +187,12 @@ class AddLocationViewModel @Inject constructor(
         }
         _loading.postValue(true)
 
-        when (val result = baseNetworkCall.editMarker(itemId,params)) {
+        when (baseNetworkCall.editMarker(itemId,params)) {
             is NetworkResult.Success -> {
                 _loading.postValue(false)
             }
 
             is NetworkResult.Error -> {
-                _errorMessage.postValue(result.message ?: "Something went wrong")
                 _loading.postValue(false)
             }
 
@@ -220,6 +209,24 @@ class AddLocationViewModel @Inject constructor(
             .map { chars.random() }
             .joinToString("")
     }
+
+    fun updateMarkers(updatedList: List<MarkerUpdateRequest>)= viewModelScope.launch {
+        _loading.postValue(true)
+        when (baseNetworkCall.updateMarkers(updatedList)) {
+            is NetworkResult.Success -> {
+               _successMessage.value="Record Imported"
+            }
+
+            is NetworkResult.Error -> {
+                _loading.postValue(false)
+            }
+
+            is NetworkResult.Loading -> {
+                _loading.postValue(true)
+            }
+        }
+    }
+
 
     fun getMarkerList(categoryId: String, userId: String) = viewModelScope.launch {
         _loading.postValue(true)
@@ -244,7 +251,6 @@ class AddLocationViewModel @Inject constructor(
             }
 
             is NetworkResult.Error -> {
-                _errorMessage.postValue(result.message ?: "Something went wrong")
                 _loading.postValue(false)
             }
 
@@ -255,9 +261,9 @@ class AddLocationViewModel @Inject constructor(
     }
 
 
-    fun getImportedMarkerList(categoryTitle: String, userId: String) = viewModelScope.launch {
+    fun getImportedMarkerList(categoryId: String, userId: String) = viewModelScope.launch {
         _loading.postValue(true)
-        when (val result = baseNetworkCall.getImportedMarkerList(categoryTitle, userId)) {
+        when (val result = baseNetworkCall.getImportedMarkerList(categoryId, userId)) {
             is NetworkResult.Success -> {
                 val locationList = result.data
 
@@ -265,19 +271,13 @@ class AddLocationViewModel @Inject constructor(
                     viewModelScope.launch {
                         locationList.forEach { location ->
                             location.let {
-                                val categoryId = it.category_id
-                                val categoryTitle = it.category_title
-
-                                if (!categoryId.isNullOrEmpty()) {
-                                    addImportedCategoryDatabaseRepository.updateRecordId(
-                                        categoryId.toInt(),
-                                        categoryTitle.toString()
-                                    )
-                                    println("CHECK_TAG_location categoryId: $categoryId, categoryTitle: $categoryTitle")
-                                }
 
                                 val updatedLocation = it.copy(entryType = "ImportedMarker")
                                 addLocationDatabaseRepository.insertAccount(updatedLocation)
+
+                                val itemId = categoryId.removePrefix("eq.").toInt()
+                                addImportedCategoryDatabaseRepository.updateShowImportStatus(itemId.toInt(),true)
+
                             }
                         }
                     }
@@ -290,7 +290,6 @@ class AddLocationViewModel @Inject constructor(
 
 
             is NetworkResult.Error -> {
-                _errorMessage.postValue(result.message ?: "Something went wrong")
                 _loading.postValue(false)
             }
 
@@ -301,17 +300,20 @@ class AddLocationViewModel @Inject constructor(
     }
 
 
-    fun deleteMarker(id: String) = viewModelScope.launch {
+
+
+    fun deleteMarkerList(ids: List<String>) = viewModelScope.launch {
+        val filter = "in.(${ids.joinToString(",")})"
+
         _loading.postValue(true)
-        when (val result = baseNetworkCall.deleteMarker(id)) {
+        when (baseNetworkCall.deleteMarkerList(filter)) {
             is NetworkResult.Success -> {
-                val cleanId = id.removePrefix("eq.").toInt()
-                addLocationDatabaseRepository.deleteSingleRecord(cleanId)
-                _successMessage.value="Record deleted"
+                val idInts = ids.mapNotNull { it.toIntOrNull() }
+                addLocationDatabaseRepository.deleteMarkerList(idInts)
+                _successMessage.value = "Record deleted"
             }
 
             is NetworkResult.Error -> {
-                _errorMessage.postValue(result.message ?: "Something went wrong")
                 _loading.postValue(false)
             }
 
@@ -320,6 +322,8 @@ class AddLocationViewModel @Inject constructor(
             }
         }
     }
+
+
     fun clearSuccessMessage() { _successMessage.value = null }
 
 

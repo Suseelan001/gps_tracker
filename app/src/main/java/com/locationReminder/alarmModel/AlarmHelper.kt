@@ -14,7 +14,6 @@ import android.telephony.SmsManager
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
-import com.locationReminder.MainActivity
 import com.locationReminder.roomDatabase.dao.LocationDAO
 import com.locationReminder.R
 import com.locationReminder.model.apiUtil.serviceModel.ApiService
@@ -143,13 +142,6 @@ class AlarmHelper @Inject constructor(
 
         context.sendBroadcast(Intent("ACTION_STOP_LOCATION_UPDATES"))
         currentLocationId = null
-    }
-
-    private fun launchMainActivity() {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        context.startActivity(intent)
     }
 
     private fun updateLocationStatusToFalse(locationId: Int) {

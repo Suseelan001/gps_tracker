@@ -52,6 +52,7 @@ fun AddFolderNameScreen(
     if (errorMessage == "Record already exist") {
         Toast.makeText(context, "Folder name already exist", Toast.LENGTH_LONG).show()
         viewModel.clearErrorMessage()
+
     }
 
     if (successMessage == "Record edited") {
@@ -59,6 +60,7 @@ fun AddFolderNameScreen(
         navController.popBackStack()
     } else {
         if (successMessage == "Folder created") {
+            Toast.makeText(context, "Folder created", Toast.LENGTH_SHORT).show()
             viewModel.clearSuccessMessage()
             navController.popBackStack()
         }
@@ -178,17 +180,6 @@ fun AddFolderNameScreen(
                                         folderName,
                                         sharedPreferenceVM.getUserId().toString()
                                     )
-
-                                    Handler(Looper.getMainLooper()).postDelayed({
-                                        Toast.makeText(
-                                            context,
-                                            "Folder created",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                        navController.popBackStack()
-                                    }, 500)
-
-
                                 }
                             }
 

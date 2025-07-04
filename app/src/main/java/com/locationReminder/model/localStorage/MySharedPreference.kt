@@ -40,7 +40,14 @@ class MySharedPreference @Inject constructor(context: Context) {
         return sharedPreference.getBoolean("EXIT-LIST-EXISTS", false)
     }
 
+    fun setImportList(value: Boolean) {
+        editor.putBoolean("IMPORT_LIST", value)
+        editor.commit()
+    }
 
+    fun getImportList(): Boolean? {
+        return sharedPreference.getBoolean("IMPORT_LIST", false)
+    }
 
 
 

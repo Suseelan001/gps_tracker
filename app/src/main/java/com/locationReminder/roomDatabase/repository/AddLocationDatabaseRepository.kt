@@ -57,24 +57,24 @@ class AddLocationDatabaseRepository @Inject constructor(
         return locationDAO.getMarkerListByFolder(categoryId,type)
     }
 
-
-
-
     fun getSingleRecord(id: Int): LocationDetail{
         return locationDAO.getSingleRecord(id)
     }
-    fun deleteSingleRecord(id: Int){
-         locationDAO.deleteSingleRecord(id)
-    }
+
 
     suspend fun deleteLocation(location: LocationDetail) {
         locationDAO.deleteLocation(location)
     }
 
-    suspend fun deleteMarkerListByFolder(categoryId: String,type: String) {
+    fun deleteMarkerListByFolder(categoryId: String,type: String) {
         locationDAO.deleteMarkerListByFolder(categoryId,type )
     }
 
+    fun deleteMarkerList(ids: List<Int>) {
+        ids.forEach {
+            locationDAO.deleteSingleRecord(it)
+        }
+    }
 
 
 }

@@ -180,7 +180,7 @@ class LocationService : Service() {
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     private fun loadMonitoredLocations() {
         locationDao.getAllRecord().observe(ProcessLifecycleOwner.get()) { allLocations ->
-
+            println("CHECK_TAG_ALL_RECORD_size " + allLocations.size )
             monitoredLocations = allLocations.filter {
                 it.currentStatus == true &&
                         (it.entryType == "Entry" || it.entryType == "Exit"|| it.entryType == "Marker"|| it.entryType == "ImportedMarker")
@@ -213,14 +213,12 @@ class LocationService : Service() {
         val isEntryType = locationType in listOf("Entry", "Marker", "ImportedMarker")
 
         if (isEntryType) {
-            // 🟡 1. First time check — skip triggering but record state
             if (locationStates[id] == null) {
                 locationStates[id] = isInside
                 delayedEntryStates[id] = isInside
-                return // Exit early
+                return
             }
 
-            // ✅ 2. Immediate Entry
             if (!wasInside && isInside && delayedEntryStates[id] != true) {
                 locationStates[id] = true
                 triggerAlarm(locationDetail, currentLatitude, currentLongitude)

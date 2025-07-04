@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
 import com.locationReminder.model.apiUtil.serviceModel.BaseNetworkSyncClass
 import com.locationReminder.model.apiUtil.utils.NetworkResult
 import com.locationReminder.reponseModel.CategoryFolderResponseModel
@@ -25,6 +26,9 @@ class AddFolderNameViewModel @Inject constructor(
 
     private val _successMessage = MutableLiveData<String?>()
     val successMessage: LiveData<String?> get() = _successMessage
+
+    private val _categoryFolderResponse = MutableLiveData<CategoryFolderResponseModel?>()
+    val categoryFolderResponse: LiveData<CategoryFolderResponseModel?> get() = _categoryFolderResponse
 
 
     private val _loading = MutableLiveData<Boolean>()
@@ -72,22 +76,30 @@ class AddFolderNameViewModel @Inject constructor(
         _loading.postValue(true)
         when (val result = baseNetworkCall.addCategoryList(params)) {
 
-                    is NetworkResult.Success -> {
-
-                val folderNameList = result.data
-                addFolderDatabaseRepository.clearUserDB()
-                folderNameList?.forEach { folder ->
-                    addFolderDatabaseRepository.insertRecord(folder)
-
+            is NetworkResult.Success -> {
+              //  _successMessage.value = "Folder created"
+                val data = result.data
+                if (data != null && data.isNotEmpty()) {
+                    _categoryFolderResponse.value = data.first()
                 }
-                        _successMessage.value="Folder created"
 
-                        _loading.postValue(false)
+                _loading.postValue(false)
             }
 
             is NetworkResult.Error -> {
 
+                val backendMessage = result.message ?: "Unknown error"
+                println("CHECK_TAG_errorMessage: $backendMessage")
+
+                val userFriendlyMessage = if (backendMessage.contains("duplicate key value", ignoreCase = true)) {
+                    "Record already exists"
+                } else {
+                    backendMessage
+                }
+
+                _errorMessage.postValue(userFriendlyMessage)
                 _loading.postValue(false)
+
             }
 
             is NetworkResult.Loading -> {
@@ -148,7 +160,7 @@ class AddFolderNameViewModel @Inject constructor(
         params["category_name"] = categoryName
 
         _loading.postValue(true)
-        when (val result = baseNetworkCall.editCategory(categoryId,params)) {
+        when (baseNetworkCall.editCategory(categoryId,params)) {
             is NetworkResult.Success -> {
                 _successMessage.value="Record edited"
                 _loading.postValue(false)

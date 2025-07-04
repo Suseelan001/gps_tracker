@@ -10,7 +10,6 @@ open class BaseApiResponse {
             val response = apiCall()
             if (response.isSuccessful) {
                 val body = response.body()
-                // Handle 204 No Content as a valid success with null body
                 if (response.code() == 204 || body != null) {
                     return NetworkResult.Success(body)
                 }
@@ -19,6 +18,10 @@ open class BaseApiResponse {
             var message = "Something went wrong!"
             response.errorBody()?.let {
                 val data = JSONObject(it.string())
+                if (data.has("code") && data.getString("code") == "23505") {
+                    message = "Record already exist"
+                }
+
                 if (data.has("error_msg")) {
                     message = data.getString("error_msg")
                 }

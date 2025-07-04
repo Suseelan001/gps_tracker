@@ -25,6 +25,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -207,11 +209,15 @@ fun CustomTextFieldWithIcon(
     value: String,
     onValueChange: (String) -> Unit,
     hint: String,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
     leadingIcon: @Composable (() -> Unit)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
     val isMobileField = hint.contains("Mobile", ignoreCase = true)
+    val focusRequester = remember { FocusRequester() }
+    val interactionSource = remember { MutableInteractionSource() }
 
     Column(
         modifier = Modifier
@@ -220,7 +226,11 @@ fun CustomTextFieldWithIcon(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(bottom = 4.dp)
+            modifier = Modifier
+                .padding(bottom = 4.dp)
+                .let {
+                    if (!enabled || readOnly) it else it
+                }
         ) {
             if (leadingIcon != null) {
                 leadingIcon()
@@ -229,40 +239,49 @@ fun CustomTextFieldWithIcon(
 
             BasicTextField(
                 value = value,
-                onValueChange = onValueChange,
+                onValueChange = {
+                    if (enabled && !readOnly) {
+                        onValueChange(it)
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
+                    .focusRequester(focusRequester)
                     .onFocusChanged { focusState ->
                         isFocused = focusState.isFocused
                     },
+                enabled = enabled,
+                readOnly = readOnly,
                 keyboardOptions = if (isMobileField) {
                     KeyboardOptions(keyboardType = KeyboardType.Number)
                 } else {
                     KeyboardOptions.Default
                 },
+                interactionSource = interactionSource,
                 textStyle = TextStyle(color = Color.White),
-                visualTransformation = VisualTransformation.None,
                 cursorBrush = SolidColor(Color.White),
+                visualTransformation = VisualTransformation.None,
                 decorationBox = { innerTextField ->
-                    if (value.isEmpty()) {
-                        Text(
-                            text = hint,
-                            color = Color.Gray
-                        )
+                    Box {
+                        if (value.isEmpty()) {
+                            Text(
+                                text = hint,
+                                color = Color.Gray
+                            )
+                        }
+                        innerTextField()
                     }
-                    innerTextField()
                 }
             )
         }
 
-        // Underline
         HorizontalDivider(
-             thickness = 1.dp,
+            thickness = 1.dp,
             color = Hexc0d1e1
         )
     }
-
 }
+
 
 
 @Composable

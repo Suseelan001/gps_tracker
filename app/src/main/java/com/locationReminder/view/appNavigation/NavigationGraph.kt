@@ -27,6 +27,7 @@ import com.locationReminder.view.SettingsScreen
 import com.locationReminder.viewModel.AddLocationViewModel
 import com.locationReminder.view.LoginScreen
 import com.locationReminder.view.MarkerListBaseScreen
+import com.locationReminder.view.ProfileScreen
 import com.locationReminder.view.SignUpScreen
 import com.locationReminder.viewModel.AddContactViewModel
 import com.locationReminder.viewModel.AddFolderNameViewModel
@@ -103,7 +104,9 @@ fun NavigationGraph(navHostController: NavHostController,padding: PaddingValues)
             val viewModeRef = hiltViewModel<AddFolderNameViewModel>()
             val sharedPreferenceVM = hiltViewModel<SharedPreferenceVM>()
             val addImportedCategoryNameViewModel = hiltViewModel<AddImportedCategoryNameViewModel>()
-            MarkerListBaseScreen(navHostController,viewModeRef,sharedPreferenceVM,addImportedCategoryNameViewModel)
+            val addLocationViewModel = hiltViewModel<AddLocationViewModel>()
+
+            MarkerListBaseScreen(navHostController,viewModeRef,sharedPreferenceVM,addImportedCategoryNameViewModel,addLocationViewModel)
 
         }
 
@@ -227,6 +230,8 @@ fun NavigationGraph(navHostController: NavHostController,padding: PaddingValues)
             ViewAllMapScreen(navHostController,type.toString(), categoryId.toString(), viewModeRef
             )}
 
-
+        composable(route = NavigationRoute.PROFILESCREEN.path) {
+            val loginVM = hiltViewModel<LoginVM>()
+            ProfileScreen(navHostController,loginVM)}
         }
 }

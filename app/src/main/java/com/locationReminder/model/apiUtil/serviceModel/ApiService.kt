@@ -3,12 +3,14 @@ package com.locationReminder.model.apiUtil.serviceModel
 
 import com.locationReminder.reponseModel.CategoryFolderResponseModel
 import com.locationReminder.reponseModel.LocationDetail
+import com.locationReminder.reponseModel.MarkerUpdateRequest
 import com.locationReminder.viewModel.UserDetailResponseModel
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Headers
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Query
@@ -27,6 +29,11 @@ interface ApiService {
     @JvmSuppressWildcards
     suspend fun callLogin(@Body params: Map<String, Any>): Response<List<UserDetailResponseModel>>
 
+
+    @PATCH("user")
+    @JvmSuppressWildcards
+    suspend fun updateUserLogin(@Query("user_mail") mail: String, @Body params: Map<String,Any>): Response<ResponseBody>
+
     //Marker list ADD  GET DELETE
     @POST("marker_list")
     @JvmSuppressWildcards
@@ -38,11 +45,18 @@ interface ApiService {
 
     @GET("marker_list?select=*")
     @JvmSuppressWildcards
-    suspend fun getImportedMarkerList(@Query("category_title") categoryTitle: String, @Query("user_id") userId: String): Response<List<LocationDetail>>
+    suspend fun getImportedMarkerList(@Query("category_id") categoryTitle: String, @Query("user_id") userId: String): Response<List<LocationDetail>>
+
+
+    @POST ("marker_list?")
+    @Headers("Prefer: return=representation")
+    @JvmSuppressWildcards
+    suspend fun updateMarkers(@Body markers: List<MarkerUpdateRequest>): Response<List<LocationDetail>>
+
 
 
     @DELETE("marker_list")
-    suspend fun deleteMarker(@Query("id") filter: String): Response<ResponseBody>
+    suspend fun deleteMarkerList(@Query("id") id: String): Response<ResponseBody>
 
     @DELETE("marker_list")
     suspend fun deleteAllMarker(@Query("category_id") categoryId: String, @Query("user_id") userId: String): Response<ResponseBody>
@@ -65,6 +79,7 @@ interface ApiService {
     //CategoryList ADD GET EDIT DELETE
 
     @POST("category_list")
+    @Headers("Prefer: return=representation")
     @JvmSuppressWildcards
     suspend fun addCategoryList(@Body params: Map<String, Any>): Response<List<CategoryFolderResponseModel>>
 

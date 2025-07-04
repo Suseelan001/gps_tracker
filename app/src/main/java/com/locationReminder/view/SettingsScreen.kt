@@ -180,9 +180,19 @@ fun SettingsScreen(
                     .background(Hex222227)
                     .padding(horizontal = 20.dp)
             ) {
+
+                if (sharedPreferenceVM.isUserLoggedIn()) {
+                    SettingItem(
+                        title = "Profile",
+                        subtitle = ""
+                    ) {
+                        navController.navigate(NavigationRoute.PROFILESCREEN.path)
+                    }
+                }
                 SettingItem(title = "Units", subtitle = selectedUnit) {
                     showDistanceDialog = true
                 }
+
 
                 SettingItem(
                     title = "Location update interval",

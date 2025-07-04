@@ -49,8 +49,8 @@ interface ImportedCategoryNameDAO {
     @Query("UPDATE imported_category_name_dao SET firstTimeImport = :status WHERE id = :id")
     suspend fun updateRecordStatus(id: Int, status: Boolean)
 
+    @Query("UPDATE imported_category_name_dao SET showImport = :status WHERE id = :id")
+    suspend fun updateShowImportStatus(id: Int, status: Boolean)
 
-    @Query("UPDATE imported_category_name_dao SET  id = :id WHERE  categoryName = :categoryName")
-    suspend fun updateRecordId(id: Int, categoryName: String)
 
 }

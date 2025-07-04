@@ -77,8 +77,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        println("CHECK_TAG_Intent " + intent.data)
        handleDeepLink(intent)
 
         val entryPoint = EntryPointAccessors.fromApplication(
@@ -173,22 +171,24 @@ class MainActivity : ComponentActivity() {
             if (data != null && data.scheme == "myapp" && data.host == "imported_marker") {
                 val categoryFolderName = data.getQueryParameter("categoryFolderName")
                 val userId = data.getQueryParameter("user_id")
+                val categoryId = data.getQueryParameter("categoryId")
                 if (userId == sharedPreferenceVM.getUserId()) {
                     Toast.makeText(this, "Import other user detail", Toast.LENGTH_SHORT).show()
                     intent.data = null
-
                     return
                 }
 
-                if (categoryFolderName != null && userId != null) {
+                if (categoryFolderName != null && userId != null&& categoryId != null) {
                     lifecycleScope.launch {
                         val existingRecord = addImportedCategoryNameViewModel
                             .isCategoryAlreadyExists(categoryFolderName, userId)
                         if (existingRecord == null) {
                             val newRecord = ImportedCategoryNameResponseModel(
+                                id = categoryId.toInt(),
                                 categoryName = categoryFolderName,
                                 userId = userId,
-                                firstTimeImport = true
+                                firstTimeImport = true,
+                                showImport=false
                             )
                             addImportedCategoryNameViewModel.insertRecord(newRecord)
 
@@ -196,6 +196,7 @@ class MainActivity : ComponentActivity() {
                             val updatedRecord = existingRecord.copy(firstTimeImport = true)
                             addImportedCategoryNameViewModel.updateRecord(updatedRecord)
                         }
+
                         haveImportedList = true
 
                     }
@@ -212,14 +213,16 @@ class MainActivity : ComponentActivity() {
         val navController = rememberNavController()
         val buttonsVisible = remember { mutableStateOf(false) }
         var isBottomBarVisible by remember { mutableStateOf(false) }
+        var navGraphInitialized by remember { mutableStateOf(false) }
 
         val startDestination = if (haveImportedList) {
+            sharedPreferenceVM.setImportList(true)
             NavigationRoute.FOLLOWSUPSCREEN.path
         } else {
+            sharedPreferenceVM.setImportList(false)
             NavigationRoute.HOMESCREEN.path
         }
 
-        var navGraphInitialized by remember { mutableStateOf(false) }
 
         LaunchedEffect(navGraphInitialized, haveImportedList) {
             if (navGraphInitialized) {
@@ -245,11 +248,6 @@ class MainActivity : ComponentActivity() {
         Scaffold(
             bottomBar = {
                 if (buttonsVisible.value) {
-                    Column {
-                        BannerAd(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp))
 
                         BottomBar(
                             navController = navController,
@@ -258,12 +256,11 @@ class MainActivity : ComponentActivity() {
                             sharedPreferenceVM = sharedPreferenceVM,
                             context = this@MainActivity
                         )
-                    }
+                   // }
                 }
             }
         ) { padding ->
             NavigationGraph(navController, padding)
-
             LaunchedEffect(Unit) {
                 navGraphInitialized = true
             }

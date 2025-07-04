@@ -26,15 +26,11 @@ import androidx.navigation.NavHostController
 import com.locationReminder.reponseModel.LocationDetail
 import com.locationReminder.ui.theme.Hex222227
 import com.locationReminder.viewModel.AddLocationViewModel
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableDoubleStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,7 +40,6 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import com.google.gson.Gson
 import com.locationReminder.ui.theme.Hex36374a
 import com.locationReminder.R
 import com.locationReminder.ui.theme.Hexeef267
@@ -60,28 +55,21 @@ import java.util.Locale
 fun OnEntryListScreen(
     navController: NavHostController,
     addLocationViewModel: AddLocationViewModel
-) {
+)
+ {
     val context = LocalContext.current
     val allRecords by addLocationViewModel.getAllRecord().observeAsState(emptyList())
 
     val entryList = remember(allRecords) { allRecords.filter { it.entryType.equals("Entry", ignoreCase = true) } }
-
-    println("CHECK_TAG_allRecords  " + Gson().toJson(allRecords))
-    val selectedItems = remember { mutableStateListOf<LocationDetail>() }
+     val selectedItems = remember { mutableStateListOf<LocationDetail>() }
     val isSelectionMode = selectedItems.isNotEmpty()
 
     val currentLatitude = remember { mutableDoubleStateOf(0.0) }
     val currentLongitude = remember { mutableDoubleStateOf(0.0) }
 
     val listState = rememberLazyListState()
-    val isScrolled by remember {
-        derivedStateOf {
-            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
-        }
-    }
 
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    val showMenu = remember { mutableStateOf(false) }
+
 
     if (entryList.isNotEmpty()) {
         LaunchedEffect(Unit) {
@@ -132,10 +120,53 @@ fun OnEntryListScreen(
         topBar = {
             LargeTopAppBar(
                 title = {
-                    Text(
-                        text = if (isSelectionMode) "${selectedItems.size} selected" else "On Entry ",
-                        color = Color.White
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = if (isSelectionMode) "${selectedItems.size} selected" else "On Entry",
+                            color = Color.White
+                        )
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        if (entryList.isNotEmpty()){
+                            FloatingActionButton(
+                                onClick = {
+                                    navController.navigate("${NavigationRoute.VIEWALLMAPSCREEN.path}/Entry/${""}") {
+                                        popUpTo(NavigationRoute.VIEWALLMAPSCREEN.path) {
+                                            inclusive = false
+                                        }
+                                        launchSingleTop = true
+                                    }
+                                },
+                                containerColor = Hexeef267,
+                                contentColor = Hex222227,
+                                modifier = Modifier.padding(end = 24.dp, bottom = 12.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.viewall), contentDescription = "View All")
+                            }
+                        }
+
+                        FloatingActionButton(
+                            onClick = {
+                                navController.navigate("${NavigationRoute.MAPSCREEN.path}/Entry/${""}/${""}/${""}") {
+                                    popUpTo(NavigationRoute.MAPSCREEN.path) {
+                                        inclusive = false
+                                    }
+                                    launchSingleTop = true
+                                }
+                            },
+                            containerColor = Hexeef267,
+                            contentColor = Hex222227,
+                            modifier = Modifier.padding(end = 24.dp, bottom = 12.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Add Marker")
+                        }
+
+                    }
                 },
                 actions = {
                     if (isSelectionMode) {
@@ -145,29 +176,23 @@ fun OnEntryListScreen(
                         }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
                         }
-                    } else if (isScrolled) {
-                        IconButton(onClick = { showMenu.value = true }) {
-                        }
                     }
                 },
                 colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = Hex222227,
                     scrolledContainerColor = Hex222227
-                ),
-                scrollBehavior = scrollBehavior
+                )
             )
-        },
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
-    ) { paddingValues ->
+
+        }) { paddingValues ->
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(Hex222227)
-                .padding(bottom = 130.dp)
-        ) {
-            if (entryList.isEmpty()) {
+        ){
+        if (entryList.isEmpty()) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -189,91 +214,75 @@ fun OnEntryListScreen(
                 }
 
             } else
-
             {
+
+
+                val adFrequency = 4
 
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 1.dp)
+                    modifier = Modifier.fillMaxSize()
                 ) {
+                    val numberOfAds = entryList.size / adFrequency
+                    val shouldShowEndAd = entryList.size % adFrequency != 0
+                    val totalAds = numberOfAds + if (shouldShowEndAd) 1 else 0
+                    val totalCount = entryList.size + totalAds
 
-
-                    items(entryList) { item ->
-                        EntryCard(
-                            item = item,
-                            isSelected = selectedItems.contains(item),
-                            onClick = {
-                                if (isSelectionMode) {
-                                    if (selectedItems.contains(item)) selectedItems.remove(item)
-                                    else selectedItems.add(item)
-                                } else {
-                                    navController.navigate("${NavigationRoute.MAPSCREEN.path}/Entry/${item.id}/${""}/${""}")
-                                }
-                            },
-                            onLongClick = {
-                                if (!selectedItems.contains(item)) selectedItems.add(item)
-                            },
-                            currentLatitude = currentLatitude.doubleValue,
-                            currentLongitude = currentLongitude.doubleValue,
-                            onToggleChange = { newStatus ->
-                                addLocationViewModel.updateCurrentStatus(item.id, newStatus)
+                    items(totalCount) { index ->
+                        val adInsertedBefore = index / (adFrequency + 1)
+                        if ((index + 1) % (adFrequency + 1) == 0 || // Regular interval ads
+                            (shouldShowEndAd && index == totalCount - 1 && entryList.size % adFrequency != 0) // End ad condition
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                BannerAd()
                             }
-                        )
-                    }
-                }
-            }
+                        } else {
+                            val actualIndex = index - adInsertedBefore
+                            if (actualIndex < entryList.size) {
+                                val item = entryList[actualIndex]
 
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-
-                if (entryList.isNotEmpty()){
-                    FloatingActionButton(
-                        onClick = {
-                            navController.navigate("${NavigationRoute.VIEWALLMAPSCREEN.path}/Entry/${""}") {
-                                popUpTo(NavigationRoute.VIEWALLMAPSCREEN.path) {
-                                    inclusive = false
-                                }
-                                launchSingleTop = true
+                                EntryCard(
+                                    item = item,
+                                    isSelected = selectedItems.contains(item),
+                                    onClick = {
+                                        if (isSelectionMode) {
+                                            if (selectedItems.contains(item)) selectedItems.remove(item)
+                                            else selectedItems.add(item)
+                                        } else {
+                                            navController.navigate("${NavigationRoute.MAPSCREEN.path}/Entry/${item.id}/${""}/${""}")
+                                        }
+                                    },
+                                    onLongClick = {
+                                        if (!selectedItems.contains(item)) selectedItems.add(item)
+                                    },
+                                    currentLatitude = currentLatitude.doubleValue,
+                                    currentLongitude = currentLongitude.doubleValue,
+                                    onToggleChange = { newStatus ->
+                                        addLocationViewModel.updateCurrentStatus(item.id, newStatus)
+                                    }
+                                )
                             }
-                        },
-                        containerColor = Hexeef267,
-                        contentColor = Hex222227,
-                        modifier = Modifier.padding(end = 24.dp, bottom = 12.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.viewall), contentDescription = "View All")
-                    }
-
-                }
-
-                FloatingActionButton(
-                    onClick = {
-                        navController.navigate("${NavigationRoute.MAPSCREEN.path}/Entry/${""}/${""}/${""}") {
-                            popUpTo(NavigationRoute.MAPSCREEN.path) {
-                                inclusive = false
-                            }
-                            launchSingleTop = true
                         }
-                    },
-                    containerColor = Hexeef267,
-                    contentColor = Hex222227,
-                    modifier = Modifier.padding(end = 24.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Marker")
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(100.dp))
+                    }
                 }
 
+
             }
+
+
         }
     }
-}
+  }
 
-@OptIn(ExperimentalFoundationApi::class)
+ @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EntryCard(
     item: LocationDetail,

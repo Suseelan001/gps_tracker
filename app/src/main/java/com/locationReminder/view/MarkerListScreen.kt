@@ -27,13 +27,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -98,17 +96,10 @@ if (successMessage=="Record updated"){
     val selectedItems = remember { mutableStateListOf<LocationDetail>() }
     val isSelectionMode = selectedItems.isNotEmpty()
 
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    val showMenu = remember { mutableStateOf(false) }
+
 
     val listState = rememberLazyListState()
-    val isScrolled by remember {
-        derivedStateOf {
-            val firstVisibleItem = listState.firstVisibleItemIndex
-            val scrollOffset = listState.firstVisibleItemScrollOffset
-            firstVisibleItem > 0 || scrollOffset > 0
-        }
-    }
+
     val context = LocalContext.current
     val currentLatitude = remember { mutableDoubleStateOf(0.0) }
     val currentLongitude = remember { mutableDoubleStateOf(0.0) }
@@ -160,27 +151,71 @@ if (successMessage=="Record updated"){
         topBar = {
             LargeTopAppBar(
                 title = {
-                    Text(
-                        if (isSelectionMode) "${selectedItems.size} selected"
-                        else "On Marker (Entry)",
-                        color = topBarTextColor
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+
+                    ) {
+                        Text(
+                            text = if (isSelectionMode) "${selectedItems.size} selected" else "On Marker\n Entry List",
+                            color = Color.White
+                        )
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        if (markerList.isNotEmpty()){
+                            FloatingActionButton(
+                                onClick = {
+                                    navController.navigate("${NavigationRoute.VIEWALLMAPSCREEN.path}/Marker/$categoryId") {
+                                        popUpTo(NavigationRoute.VIEWALLMAPSCREEN.path) {
+                                            inclusive = false
+                                        }
+                                        launchSingleTop = true
+                                    }
+                                },
+                                containerColor = Hexeef267,
+                                contentColor = Hex222227,
+                                modifier = Modifier.padding(end = 24.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.viewall), contentDescription = "View All")
+                            }
+                        }
+
+                        FloatingActionButton(
+                            onClick = {
+                                navController.navigate("${NavigationRoute.MAPSCREEN.path}/Marker/${""}/$categoryId/$categoryTitle") {
+                                    popUpTo(NavigationRoute.MAPSCREEN.path) {
+                                        inclusive = false
+                                    }
+                                    launchSingleTop = true
+                                }
+                            },
+                            containerColor = Hexeef267,
+                            contentColor = Hex222227,
+                            modifier = Modifier.padding(end = 24.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Add Marker")
+                        }
+
+                    }
                 },
+
                 actions = {
+
                     if (isSelectionMode) {
                         IconButton(onClick = {
-                            selectedItems.forEach {
-                                addLocationViewModel.deleteMarker("eq.${it.id}")
+                            val ids = selectedItems.map { it.id.toString() }
+
+                            if (ids.isNotEmpty()) {
+                                addLocationViewModel.deleteMarkerList(ids)
                             }
+
                             selectedItems.clear()
                         }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete", tint = topBarTextColor)
-                        }
-                    } else {
-                        if (isScrolled) {
-                            IconButton(onClick = { showMenu.value = true }) {
-                            }
-
                         }
                     }
                 },
@@ -190,13 +225,9 @@ if (successMessage=="Record updated"){
                     titleContentColor = topBarTextColor,
                     navigationIconContentColor = topBarTextColor,
                     actionIconContentColor = topBarTextColor
-                ),
+                ))
 
-                scrollBehavior = scrollBehavior
-            )
-
-        },
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        }
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -273,186 +304,168 @@ if (successMessage=="Record updated"){
 
                 else ->  {
 
+                    val adFrequency = 4
+                    val numberOfAds = markerList.size / adFrequency
+                    val shouldShowEndAd = markerList.size % adFrequency != 0
+                    val totalAds = numberOfAds + if (shouldShowEndAd) 1 else 0
+                    val totalCount = markerList.size + totalAds
+
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(bottom = 1.dp)
                     ) {
-                        items(markerList) { item ->
-                            val isSelected = selectedItems.contains(item)
-                            val toggleState = remember { mutableStateOf(item.currentStatus) }
+                        items(totalCount) { index ->
+                            val adInsertedBefore = index / (adFrequency + 1)
+                            val isAdPosition =
+                                (index + 1) % (adFrequency + 1) == 0 ||
+                                        (shouldShowEndAd && index == totalCount - 1 && markerList.size % adFrequency != 0)
 
-
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(180.dp)
-                                    .padding(bottom = 16.dp)
-                                    .combinedClickable(
-                                        onClick = {
-                                            if (isSelectionMode) {
-                                                if (isSelected) selectedItems.remove(item)
-                                                else selectedItems.add(item)
-                                            } else {
-                                                navController.navigate("${NavigationRoute.MAPSCREEN.path}/Marker/${item.id}/$categoryId/$categoryTitle")
-
-                                            }
-                                        },
-                                        onLongClick = {
-                                            if (!isSelected) selectedItems.add(item)
-                                        }
-                                    ),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isSelected) Color(0xFFE3F2FD) else Hex36374a
-                                )
-                            ) {
-                                Row(
+                            if (isAdPosition) {
+                                // Show banner ad
+                                Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(top = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .padding(vertical = 10.dp)
                                 ) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.marker),
-                                        contentDescription = "Item Image",
-                                        modifier = Modifier
-                                            .width(70.dp)
-                                            .height(70.dp),
-                                        contentScale = ContentScale.Crop
-                                    )
+                                    BannerAd()
+                                }
+                            } else {
+                                // Adjust index to get the correct marker item
+                                val actualIndex = index - adInsertedBefore
+                                val item = markerList[actualIndex]
+                                val isSelected = selectedItems.contains(item)
+                                val toggleState = remember { mutableStateOf(item.currentStatus) }
 
-                                    Column(
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(180.dp)
+                                        .padding(bottom = 16.dp)
+                                        .combinedClickable(
+                                            onClick = {
+                                                if (isSelectionMode) {
+                                                    if (isSelected) selectedItems.remove(item)
+                                                    else selectedItems.add(item)
+                                                } else {
+                                                    navController.navigate("${NavigationRoute.MAPSCREEN.path}/Marker/${item.id}/$categoryId/$categoryTitle")
+                                                }
+                                            },
+                                            onLongClick = {
+                                                if (!isSelected) selectedItems.add(item)
+                                            }
+                                        ),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isSelected) Color(0xFFE3F2FD) else Hex36374a
+                                    )
+                                ) {
+                                    Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(end = 16.dp, bottom = 16.dp)
-                                            .wrapContentWidth()
+                                            .padding(top = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = item.title,
-                                                style = RobotoMediumWithHexFFFFFF18sp,
-                                                modifier = Modifier.weight(1f),
-                                                maxLines = 2,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Spacer(Modifier.width(4.dp))
-                                            Switch(
-                                                checked = toggleState.value,
-                                                onCheckedChange = null,
-                                                modifier = Modifier
-                                                    .scale(0.75f)
-                                                    .clickable {
-                                                        toggleState.value = !toggleState.value
-                                                        if (item.entryType == "Marker") {
-                                                            addLocationViewModel.updateMarkerStatus("eq.${item.id}", toggleState.value)
-                                                        } else {
-                                                            addLocationViewModel.updateCurrentStatus(item.id, toggleState.value)
-                                                        }
-                                                    },
-                                                colors = SwitchDefaults.colors(
-                                                    uncheckedThumbColor = Color(0xFFEEF267),
-                                                    checkedThumbColor = Color.White,
-                                                    uncheckedTrackColor = Color.White,
-                                                    checkedTrackColor = Color(0xFFEEF267),
-                                                    uncheckedBorderColor = Color.Transparent,
-                                                    checkedBorderColor = Color.Transparent
-                                                )
-                                            )
-
-
-
-                                        }
-
-                                        Spacer(modifier = Modifier.height(8.dp))
-
-                                        Text(
-                                            text = item.address,
-                                            style = RobotoRegularWithHexHex80808016sp,
-                                            maxLines = 3,
-                                            overflow = TextOverflow.Ellipsis
+                                        Image(
+                                            painter = painterResource(id = R.drawable.marker),
+                                            contentDescription = "Item Image",
+                                            modifier = Modifier
+                                                .width(70.dp)
+                                                .height(70.dp),
+                                            contentScale = ContentScale.Crop
                                         )
 
-                                        Spacer(modifier = Modifier.height(4.dp))
-
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.Start
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(end = 16.dp, bottom = 16.dp)
+                                                .wrapContentWidth()
                                         ) {
-                                            if (currentLatitude.doubleValue!=0.0 && currentLongitude.doubleValue!=0.0){
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
                                                 Text(
-                                                    text = calculateDistanceInKm(currentLatitude.doubleValue,currentLongitude.doubleValue,item.lat,item.lng),
-                                                    style = RobotoRegularWithHexHexeef26714sp,
+                                                    text = item.title,
+                                                    style = RobotoMediumWithHexFFFFFF18sp,
+                                                    modifier = Modifier.weight(1f),
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+
+                                                Spacer(Modifier.width(4.dp))
+
+                                                Switch(
+                                                    checked = toggleState.value,
+                                                    onCheckedChange = null,
+                                                    modifier = Modifier
+                                                        .scale(0.75f)
+                                                        .clickable {
+                                                            toggleState.value = !toggleState.value
+                                                            if (item.entryType == "Marker") {
+                                                                addLocationViewModel.updateMarkerStatus("eq.${item.id}", toggleState.value)
+                                                            } else {
+                                                                addLocationViewModel.updateCurrentStatus(item.id, toggleState.value)
+                                                            }
+                                                        },
+                                                    colors = SwitchDefaults.colors(
+                                                        uncheckedThumbColor = Color(0xFFEEF267),
+                                                        checkedThumbColor = Color.White,
+                                                        uncheckedTrackColor = Color.White,
+                                                        checkedTrackColor = Color(0xFFEEF267),
+                                                        uncheckedBorderColor = Color.Transparent,
+                                                        checkedBorderColor = Color.Transparent
+                                                    )
                                                 )
                                             }
-                                            Spacer(modifier = Modifier.weight(1f))
+
+                                            Spacer(modifier = Modifier.height(8.dp))
+
                                             Text(
-                                                text = String.format(Locale.US,"%.5f, %.5f", item.lat, item.lng),
-                                                style = RobotoRegularWithHexFFFFFF14sp,
-                                                modifier = Modifier.padding(end = 2.dp)
+                                                text = item.address,
+                                                style = RobotoRegularWithHexHex80808016sp,
+                                                maxLines = 3,
+                                                overflow = TextOverflow.Ellipsis
                                             )
+
+                                            Spacer(modifier = Modifier.height(4.dp))
+
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Start
+                                            ) {
+                                                if (currentLatitude.doubleValue != 0.0 && currentLongitude.doubleValue != 0.0) {
+                                                    Text(
+                                                        text = calculateDistanceInKm(
+                                                            currentLatitude.doubleValue,
+                                                            currentLongitude.doubleValue,
+                                                            item.lat,
+                                                            item.lng
+                                                        ),
+                                                        style = RobotoRegularWithHexHexeef26714sp,
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.weight(1f))
+                                                Text(
+                                                    text = String.format(Locale.US, "%.5f, %.5f", item.lat, item.lng),
+                                                    style = RobotoRegularWithHexFFFFFF14sp,
+                                                    modifier = Modifier.padding(end = 2.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
-
-
-
                         }
                     }
+
+
                 }
             }
 
             }
 
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-
-                if (markerList.isNotEmpty()){
-                    FloatingActionButton(
-                        onClick = {
-                            navController.navigate("${NavigationRoute.VIEWALLMAPSCREEN.path}/Marker/$categoryId") {
-                                popUpTo(NavigationRoute.VIEWALLMAPSCREEN.path) {
-                                    inclusive = false
-                                }
-                                launchSingleTop = true
-                            }
-                        },
-                        containerColor = Hexeef267,
-                        contentColor = Hex222227,
-                        modifier = Modifier.padding(end = 24.dp, bottom = 12.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.viewall), contentDescription = "View All")
-                    }
-                }
-
-                FloatingActionButton(
-                    onClick = {
-                        navController.navigate("${NavigationRoute.MAPSCREEN.path}/Marker/${""}/$categoryId/$categoryTitle") {
-                            popUpTo(NavigationRoute.MAPSCREEN.path) {
-                                inclusive = false
-                            }
-                            launchSingleTop = true
-                        }
-                    },
-                    containerColor = Hexeef267,
-                    contentColor = Hex222227,
-                    modifier = Modifier.padding(end = 24.dp, bottom = 24.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Marker")
-                }
-
-            }
 
         }
 

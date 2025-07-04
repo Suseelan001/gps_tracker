@@ -17,6 +17,7 @@ sealed class NavigationRoute(val path:String) {
     data object ADDFOLDERNAMESCREEN: NavigationRoute("AddFolderNameScreen")
     data object IMPORTEDMARKERLISTSCREEN: NavigationRoute("ImportedMarkerListScreen")
     data object IMPORTMAPSCREEN: NavigationRoute("ImportMapScreen")
+    data object PROFILESCREEN: NavigationRoute("PROFILESCREEN")
 
 }
 

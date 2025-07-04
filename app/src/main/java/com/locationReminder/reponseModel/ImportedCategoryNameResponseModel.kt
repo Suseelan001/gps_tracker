@@ -11,6 +11,7 @@ data class ImportedCategoryNameResponseModel (
     val id: Int = 0,
     @SerializedName("category_name" ) var categoryName : String? = null,
     @SerializedName("user_id"       ) var userId       : String? = null,
-    @SerializedName("first_Time_Import"       ) var firstTimeImport       : Boolean? = null
+    @SerializedName("first_Time_Import") var firstTimeImport       : Boolean? = null,
+    @SerializedName("showImport") var showImport       : Boolean? = null
 
 )

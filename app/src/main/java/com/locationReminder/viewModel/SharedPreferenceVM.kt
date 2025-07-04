@@ -17,6 +17,9 @@ class SharedPreferenceVM @Inject constructor(private val mySharedPreference: MyS
     fun getUserId(): String {
         return mySharedPreference.getUserId() ?: ""
     }
+    fun getUserName(): String {
+        return mySharedPreference.getUserName() ?: ""
+    }
 
     fun getExitListExists(): Boolean {
         return mySharedPreference.getExitListExists() == true
@@ -27,6 +30,12 @@ class SharedPreferenceVM @Inject constructor(private val mySharedPreference: MyS
 
 
 
+    fun getImportList(): Boolean {
+        return mySharedPreference.getImportList() == true
+    }
+    fun setImportList(value: Boolean) {
+        mySharedPreference.setImportList(value)
+    }
 
 
 
