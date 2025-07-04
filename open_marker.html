@@ -10,15 +10,17 @@
       const category = encodeURIComponent(params.get("categoryFolderName"));
       const userId = encodeURIComponent(params.get("user_id"));
       const categoryId = encodeURIComponent(params.get("categoryId"));
+     const userName = encodeURIComponent(params.get("userName"));
+
 
       // Safety check
-      if (!category || !userId || !categoryId) {
+      if (!category || !userId || !categoryId || userName) {
         document.body.innerHTML = "<p>Missing parameters. Cannot redirect.</p>";
         return;
       }
 
       // ✅ Corrected deep link as a string
-      deepLink = `myapp://imported_marker?categoryFolderName=${category}&user_id=${userId}&categoryId=${categoryId}`;
+      deepLink = `myapp://imported_marker?categoryFolderName=${category}&user_id=${userId}&categoryId=${categoryId}&userName=${userName}`;
 
       // Auto redirect
       window.location.href = deepLink;
