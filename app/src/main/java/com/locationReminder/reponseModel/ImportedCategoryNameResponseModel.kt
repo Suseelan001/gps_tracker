@@ -12,6 +12,8 @@ data class ImportedCategoryNameResponseModel (
     @SerializedName("category_name" ) var categoryName : String? = null,
     @SerializedName("user_id"       ) var userId       : String? = null,
     @SerializedName("first_Time_Import") var firstTimeImport       : Boolean? = null,
-    @SerializedName("showImport") var showImport       : Boolean? = null
+    @SerializedName("showImport") var showImport       : Boolean? = null,
+    @SerializedName("userName") var userName       : String? = null
+
 
 )

@@ -77,7 +77,7 @@ class AddFolderNameViewModel @Inject constructor(
         when (val result = baseNetworkCall.addCategoryList(params)) {
 
             is NetworkResult.Success -> {
-              //  _successMessage.value = "Folder created"
+                _successMessage.value = "Folder created"
                 val data = result.data
                 if (data != null && data.isNotEmpty()) {
                     _categoryFolderResponse.value = data.first()

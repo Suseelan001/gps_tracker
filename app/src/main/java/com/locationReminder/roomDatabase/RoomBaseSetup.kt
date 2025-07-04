@@ -17,7 +17,7 @@ import com.locationReminder.roomDatabase.dao.UserDao
 import com.locationReminder.viewModel.UserDetailResponseModel
 
 @Database(
-    version = 36,
+    version = 37,
     exportSchema = false,
     entities = [
         LocationDetail::class,

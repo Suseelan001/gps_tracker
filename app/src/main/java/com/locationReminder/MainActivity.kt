@@ -172,13 +172,14 @@ class MainActivity : ComponentActivity() {
                 val categoryFolderName = data.getQueryParameter("categoryFolderName")
                 val userId = data.getQueryParameter("user_id")
                 val categoryId = data.getQueryParameter("categoryId")
+                val userName = data.getQueryParameter("userName")
                 if (userId == sharedPreferenceVM.getUserId()) {
                     Toast.makeText(this, "Import other user detail", Toast.LENGTH_SHORT).show()
                     intent.data = null
                     return
                 }
 
-                if (categoryFolderName != null && userId != null&& categoryId != null) {
+                if (categoryFolderName != null && userId != null&& categoryId != null&& userName != null) {
                     lifecycleScope.launch {
                         val existingRecord = addImportedCategoryNameViewModel
                             .isCategoryAlreadyExists(categoryFolderName, userId)
