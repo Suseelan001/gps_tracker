@@ -7,10 +7,10 @@
 
     window.onload = function () {
       const params = new URLSearchParams(window.location.search);
-      const category = encodeURIComponent(params.get("categoryFolderName"));
-      const userId = encodeURIComponent(params.get("user_id"));
-      const categoryId = encodeURIComponent(params.get("categoryId"));
-     const userName = encodeURIComponent(params.get("userName"));
+      const category = encodeURIComponent(params.get("FN"));
+      const userId = encodeURIComponent(params.get("UID"));
+      const categoryId = encodeURIComponent(params.get("CID"));
+     const userName = encodeURIComponent(params.get("UN"));
 
 
       // Safety check
@@ -20,7 +20,7 @@
       }
 
       // ✅ Corrected deep link as a string
-      deepLink = `myapp://imported_marker?categoryFolderName=${category}&user_id=${userId}&categoryId=${categoryId}&userName=${userName}`;
+      deepLink = `myapp://imported_marker?FN=${category}&UID=${userId}&CID=${categoryId}&UN=${userName}`;
 
       // Auto redirect
       window.location.href = deepLink;
