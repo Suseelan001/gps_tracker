@@ -31,14 +31,15 @@ class MySharedPreference @Inject constructor(context: Context) {
         return sharedPreference.getString("USER_NAME", null)
     }
 
-    fun setExitListExists(value: Boolean) {
-        editor.putBoolean("EXIT-LIST-EXISTS", value)
+    fun setArea(userId: String) {
+        editor.putString("AREA_NAME", userId)
         editor.commit()
     }
 
-    fun getExitListExists(): Boolean? {
-        return sharedPreference.getBoolean("EXIT-LIST-EXISTS", false)
+    fun getArea(): String? {
+        return sharedPreference.getString("AREA_NAME", null)
     }
+
 
     fun setImportList(value: Boolean) {
         editor.putBoolean("IMPORT_LIST", value)
@@ -54,7 +55,7 @@ class MySharedPreference @Inject constructor(context: Context) {
     fun clearAll() {
         editor.putString("USER-ID", null)
         editor.putString("USER_NAME", null)
-        editor.putBoolean("EXIT-LIST-EXISTS", false)
+        editor.putBoolean("IMPORT_LIST", false)
         editor.commit()
     }
 

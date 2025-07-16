@@ -1,6 +1,5 @@
 package com.locationReminder.reponseModel
 
-import kotlin.collections.set
 
 data class MarkerUpdateRequest(
 
@@ -14,7 +13,7 @@ data class MarkerUpdateRequest(
     val lng: Double,
     val sendNotification: Boolean=false,
     val vibration: Boolean=true,
-    var category_title : String? = null,
+    var category_name : String? = null,
     var category_id : String? = null,
     var user_id : String? = null,
 

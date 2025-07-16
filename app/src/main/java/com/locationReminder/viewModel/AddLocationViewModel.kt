@@ -15,6 +15,7 @@ import com.locationReminder.roomDatabase.repository.AddLocationDatabaseRepositor
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.concurrent.atomic.AtomicInteger
 
 @HiltViewModel
 class AddLocationViewModel @Inject constructor(
@@ -94,7 +95,7 @@ class AddLocationViewModel @Inject constructor(
     ) = viewModelScope.launch {
         val params = mutableMapOf<String, Any>()
         params["title"] = title
-        params["id"] = generateUniqueId()
+        params["id"] = generate6DigitUniqueId()
         params["address"] = address
         params["entryType"] = entryType
         params["radius"] = radius
@@ -104,7 +105,7 @@ class AddLocationViewModel @Inject constructor(
         params["sendNotification"] = sendNotification
         params["vibration"] = vibration
         params["category_id"] = categoryId
-        params["category_title"] = categoryTitle
+        params["category_name"] = categoryTitle
         mySharedPreference.getUserId()?.toIntOrNull()?.let {
             params["user_id"] = it
         }
@@ -177,7 +178,7 @@ class AddLocationViewModel @Inject constructor(
         params["sendNotification"] = sendNotification
         params["vibration"] = vibration
         params["category_id"] = categoryId
-        params["category_title"] = categoryTitle
+        params["category_name"] = categoryTitle
 
 
         mySharedPreference.getUserId()?.toIntOrNull()?.let {
@@ -203,11 +204,13 @@ class AddLocationViewModel @Inject constructor(
     }
 
 
-    fun generateUniqueId(length: Int = 5): String {
-        val chars = "0123456789"
-        return (1..length)
-            .map { chars.random() }
-            .joinToString("")
+    private val counter = AtomicInteger(0)
+
+    fun generate6DigitUniqueId(): String {
+        val timePart = (System.currentTimeMillis() / 1000) % 100000
+        val countPart = counter.getAndIncrement() % 100
+        val id = "$timePart${String.format("%02d", countPart)}"
+        return id.padStart(6, '0').takeLast(6)
     }
 
     fun updateMarkers(updatedList: List<MarkerUpdateRequest>)= viewModelScope.launch {
@@ -275,8 +278,7 @@ class AddLocationViewModel @Inject constructor(
                                 val updatedLocation = it.copy(entryType = "ImportedMarker")
                                 addLocationDatabaseRepository.insertAccount(updatedLocation)
 
-                                val itemId = categoryId.removePrefix("eq.").toInt()
-                                addImportedCategoryDatabaseRepository.updateShowImportStatus(itemId.toInt(),true)
+
 
                             }
                         }

@@ -48,6 +48,11 @@ class AddImportedCategoryNameViewModel @Inject constructor(
             addImportedCategoryDatabaseRepository.updateRecordStatus(id, status)
         }
     }
+     fun updateShowImportStatus(id: Int, status: Boolean) {
+        viewModelScope.launch {
+            addImportedCategoryDatabaseRepository.updateShowImportStatus(id, status)
+        }
+    }
 
     fun insertRecord(record: ImportedCategoryNameResponseModel) {
         viewModelScope.launch {

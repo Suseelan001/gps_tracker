@@ -56,6 +56,12 @@
                 <data android:scheme="myapp" android:host="imported_marker"/>
             </intent-filter>
 
+            <intent-filter>
+                <action android:name="android.intent.action.SENDTO" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="smsto" />
+            </intent-filter>
+
         </activity>
 
 

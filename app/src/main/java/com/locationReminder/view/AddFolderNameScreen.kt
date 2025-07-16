@@ -1,8 +1,7 @@
 package com.locationReminder.view
 
 
-import android.os.Handler
-import android.os.Looper
+
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -165,10 +164,7 @@ fun AddFolderNameScreen(
                                 if (id.isNotEmpty()) {
                                     val record =
                                         addImportedCategoryNameViewModel.getRecordById(id.toInt())
-                                    val updatedRecord = record.copy(
-                                        firstTimeImport = false,
-                                        categoryName = folderName
-                                    )
+                                    val updatedRecord = record.copy(firstTimeImport = false, categoryName = folderName)
                                     addImportedCategoryNameViewModel.updateRecord(updatedRecord)
                                     navController.popBackStack()
                                 }
@@ -178,7 +174,8 @@ fun AddFolderNameScreen(
                                 } else {
                                     viewModel.addCategoryList(
                                         folderName,
-                                        sharedPreferenceVM.getUserId().toString()
+                                        sharedPreferenceVM.getUserId().toString(),
+                                        sharedPreferenceVM.getUserName()
                                     )
                                 }
                             }

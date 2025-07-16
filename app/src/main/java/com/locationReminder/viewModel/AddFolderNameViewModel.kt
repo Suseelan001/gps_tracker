@@ -1,11 +1,9 @@
 package com.locationReminder.viewModel
 
-import androidx.compose.animation.slideOut
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.gson.Gson
 import com.locationReminder.model.apiUtil.serviceModel.BaseNetworkSyncClass
 import com.locationReminder.model.apiUtil.utils.NetworkResult
 import com.locationReminder.reponseModel.CategoryFolderResponseModel
@@ -69,10 +67,18 @@ class AddFolderNameViewModel @Inject constructor(
         return addFolderDatabaseRepository.getAllRecord()
     }
 
-    fun addCategoryList(categoryName: String,userId: String) = viewModelScope.launch {
+
+
+
+
+
+    fun addCategoryList(categoryName: String,userId: String,userName: String,areaName: String="") = viewModelScope.launch {
         val params = mutableMapOf<String, Any>()
         params["category_name"] = categoryName
         params["user_id"] = userId
+        params["userName"] = userName
+        params["area_name"] = areaName
+        params["current_status"] = true
         _loading.postValue(true)
         when (val result = baseNetworkCall.addCategoryList(params)) {
 
@@ -87,23 +93,107 @@ class AddFolderNameViewModel @Inject constructor(
             }
 
             is NetworkResult.Error -> {
-
                 val backendMessage = result.message ?: "Unknown error"
-                println("CHECK_TAG_errorMessage: $backendMessage")
-
-                val userFriendlyMessage = if (backendMessage.contains("duplicate key value", ignoreCase = true)) {
+                val errorMessage = if (backendMessage.contains("duplicate key value", ignoreCase = true)) {
                     "Record already exists"
                 } else {
                     backendMessage
                 }
 
-                _errorMessage.postValue(userFriendlyMessage)
+                _errorMessage.postValue(errorMessage)
                 _loading.postValue(false)
 
             }
 
             is NetworkResult.Loading -> {
                 _loading.postValue(true)
+            }
+        }
+    }
+
+    fun getMarkerList(categoryId: String, userId: String) = viewModelScope.launch {
+        when (val result = baseNetworkCall.getMarkerList(categoryId, userId)) {
+            is NetworkResult.Success -> {
+                val locationList = result.data
+                if (locationList?.isNotEmpty() == true) {
+                    viewModelScope.launch {
+                        locationList.forEach { location ->
+                            getCategoryFolderList(userId)
+                            addLocationDatabaseRepository.insertAccount(location)
+
+                        }
+
+                    }
+                }else {
+                    getCategoryFolderList(userId)
+
+                }
+            }
+
+            is NetworkResult.Error -> {
+                _loading.postValue(false)
+            }
+
+            is NetworkResult.Loading -> {
+                _loading.postValue(true)
+            }
+        }
+    }
+
+
+    fun updateAllMarkerStatus(categoryId: String,userId: String,currentStatus: Boolean) = viewModelScope.launch {
+        val params = mutableMapOf<String, Any>()
+        params["currentStatus"] = currentStatus
+        when (val result = baseNetworkCall.updateAllMarkerStatus(categoryId,userId,params)) {
+            is NetworkResult.Success -> {
+                getMarkerList(categoryId,userId)
+
+            }
+
+            is NetworkResult.Error -> {
+                val backendMessage = result.message ?: "Unknown error"
+                val errorMessage = if (backendMessage.contains("duplicate key value", ignoreCase = true)) {
+                    "Record already exists"
+                } else {
+                    backendMessage
+                }
+
+                _errorMessage.postValue(errorMessage)
+                _loading.postValue(false)
+
+            }
+
+            is NetworkResult.Loading -> {
+                _loading.postValue(true)
+            }
+        }
+    }
+
+
+    fun updateCategoryListStatus(categoryId: String,userId: String="",currentStatus: Boolean) = viewModelScope.launch {
+        val params = mutableMapOf<String, Any>()
+        params["current_status"] = currentStatus
+        _loading.postValue(true)
+
+        when (val result = baseNetworkCall.updateCategoryListStatus(categoryId,params)) {
+            is NetworkResult.Success -> {
+                updateAllMarkerStatus(categoryId,userId,currentStatus)
+
+            }
+            is NetworkResult.Error -> {
+                val backendMessage = result.message ?: "Unknown error"
+                val errorMessage = if (backendMessage.contains("duplicate key value", ignoreCase = true)) {
+                    "Record already exists"
+                } else {
+                    backendMessage
+                }
+
+                _errorMessage.postValue(errorMessage)
+                _loading.postValue(false)
+
+            }
+
+            is NetworkResult.Loading -> {
             }
         }
     }
@@ -121,7 +211,6 @@ class AddFolderNameViewModel @Inject constructor(
             is NetworkResult.Success -> {
                 val itemId = categoryId.removePrefix("eq.")
                 deleteMarkerListByFolder(itemId,"Marker")
-
                 _successMessage.value="Record deleted"
 
                 _loading.postValue(false)

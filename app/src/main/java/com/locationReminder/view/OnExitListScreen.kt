@@ -2,6 +2,9 @@ package com.locationReminder.view
 
 import android.content.pm.PackageManager
 import android.os.Looper
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.TextView
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
@@ -10,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -21,19 +25,27 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.locationReminder.viewModel.AddLocationViewModel
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
+import com.google.android.gms.ads.AdLoader
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.nativead.MediaView
+import com.google.android.gms.ads.nativead.NativeAd
+import com.google.android.gms.ads.nativead.NativeAdView
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -62,10 +74,11 @@ fun OnExitListScreen(
 
     val selectedItems = remember { mutableStateListOf<LocationDetail>() }
     val isSelectionMode = selectedItems.isNotEmpty()
-
-
-
     val listState = rememberLazyListState()
+
+
+
+    rememberLazyListState()
 
     val context = LocalContext.current
     val currentLatitude = remember { mutableDoubleStateOf(0.0) }
@@ -220,160 +233,181 @@ fun OnExitListScreen(
                 }
 
             } else
-            {val adFrequency = 4
+
+
+            {
+                val adFrequency = 4
 
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    val numberOfAds = exitList.size / adFrequency
-                    val shouldShowEndAd = exitList.size % adFrequency != 0
-                    val totalAds = numberOfAds + if (shouldShowEndAd) 1 else 0
-                    val totalCount = exitList.size + totalAds
+                    itemsIndexed(exitList) { actualIndex, item ->
+                        val isSelected = selectedItems.contains(item)
 
-                    items(totalCount) { index ->
-                        val adInsertedBefore = index / (adFrequency + 1)
-
-                        // Ad positions: every 4 items + one final ad
-                        val isAdPosition =
-                            (index + 1) % (adFrequency + 1) == 0 ||
-                                    (shouldShowEndAd && index == totalCount - 1 && exitList.size % adFrequency != 0)
-
-                        if (isAdPosition) {
-                            Column(
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
+                                .padding(bottom = 16.dp)
+                                .combinedClickable(
+                                    onClick = {
+                                        if (isSelectionMode) {
+                                            if (isSelected) selectedItems.remove(item)
+                                            else selectedItems.add(item)
+                                        } else {
+                                            navController.navigate("${NavigationRoute.MAPSCREEN.path}/Exit/${item.id}/${""}/${""}")
+                                        }
+                                    },
+                                    onLongClick = {
+                                        if (!isSelected) selectedItems.add(item)
+                                    }
+                                ),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) Color(0xFFE3F2FD) else Hex36374a
+                            )
+                        ) {
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 16.dp)
+                                    .padding(top = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                BannerAd()
-                            }
-                        } else {
-                            val actualIndex = index - adInsertedBefore
-                            if (actualIndex in exitList.indices) {
-                                val item = exitList[actualIndex]
-                                val isSelected = selectedItems.contains(item)
+                                Image(
+                                    painter = painterResource(id = R.drawable.onexit),
+                                    contentDescription = "Item Image",
+                                    modifier = Modifier
+                                        .width(70.dp)
+                                        .height(70.dp),
+                                    contentScale = ContentScale.Crop
+                                )
 
-                                Card(
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(180.dp)
-                                        .padding(bottom = 16.dp)
-                                        .combinedClickable(
-                                            onClick = {
-                                                if (isSelectionMode) {
-                                                    if (isSelected) selectedItems.remove(item)
-                                                    else selectedItems.add(item)
-                                                } else {
-                                                    navController.navigate("${NavigationRoute.MAPSCREEN.path}/Exit/${item.id}/${""}/${""}")
-                                                }
-                                            },
-                                            onLongClick = {
-                                                if (!isSelected) selectedItems.add(item)
-                                            }
-                                        ),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = if (isSelected) Color(0xFFE3F2FD) else Hex36374a
-                                    )
+                                        .padding(end = 16.dp, bottom = 16.dp)
+                                        .wrapContentWidth()
                                 ) {
                                     Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Image(
-                                            painter = painterResource(id = R.drawable.onexit),
-                                            contentDescription = "Item Image",
-                                            modifier = Modifier
-                                                .width(70.dp)
-                                                .height(70.dp),
-                                            contentScale = ContentScale.Crop
+                                        Text(
+                                            text = item.title,
+                                            style = RobotoMediumWithHexFFFFFF18sp,
+                                            modifier = Modifier.weight(1f),
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
                                         )
 
-                                        Column(
+                                        Spacer(Modifier.width(4.dp))
+
+                                        Switch(
+                                            checked = item.currentStatus,
+                                            onCheckedChange = null,
                                             modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(end = 16.dp, bottom = 16.dp)
-                                                .wrapContentWidth()
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                Text(
-                                                    text = item.title,
-                                                    style = RobotoMediumWithHexFFFFFF18sp,
-                                                    modifier = Modifier.weight(1f),
-                                                    maxLines = 2,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-
-                                                Spacer(Modifier.width(4.dp))
-
-                                                Switch(
-                                                    checked = item.currentStatus,
-                                                    onCheckedChange = null,
-                                                    modifier = Modifier
-                                                        .scale(0.75f)
-                                                        .clickable {
-                                                            addLocationViewModel.updateCurrentStatus(
-                                                                item.id,
-                                                                !item.currentStatus
-                                                            )
-                                                        },
-                                                    colors = SwitchDefaults.colors(
-                                                        uncheckedThumbColor = Color(0xFFEEF267),
-                                                        checkedThumbColor = Color.White,
-                                                        uncheckedTrackColor = Color.White,
-                                                        checkedTrackColor = Color(0xFFEEF267),
-                                                        uncheckedBorderColor = Color.Transparent,
-                                                        checkedBorderColor = Color.Transparent
+                                                .scale(0.75f)
+                                                .clickable {
+                                                    addLocationViewModel.updateCurrentStatus(
+                                                        item.id,
+                                                        !item.currentStatus
                                                     )
-                                                )
-                                            }
-
-                                            Spacer(modifier = Modifier.height(8.dp))
-
-                                            Text(
-                                                text = item.address,
-                                                style = RobotoRegularWithHexHex80808016sp,
-                                                maxLines = 3,
-                                                overflow = TextOverflow.Ellipsis
+                                                },
+                                            colors = SwitchDefaults.colors(
+                                                uncheckedThumbColor = Color(0xFFEEF267),
+                                                checkedThumbColor = Color.White,
+                                                uncheckedTrackColor = Color.White,
+                                                checkedTrackColor = Color(0xFFEEF267),
+                                                uncheckedBorderColor = Color.Transparent,
+                                                checkedBorderColor = Color.Transparent
                                             )
+                                        )
+                                    }
 
-                                            Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
 
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.Start
-                                            ) {
-                                                if (currentLatitude.doubleValue != 0.0 && currentLongitude.doubleValue != 0.0) {
-                                                    Text(
-                                                        text = calculateDistanceInKm(
-                                                            currentLatitude.doubleValue,
-                                                            currentLongitude.doubleValue,
-                                                            item.lat,
-                                                            item.lng
-                                                        ),
-                                                        style = RobotoRegularWithHexHexeef26714sp,
-                                                    )
-                                                }
-                                                Spacer(modifier = Modifier.weight(1f))
-                                                Text(
-                                                    text = String.format(
-                                                        Locale.US,
-                                                        "%.5f, %.5f",
-                                                        item.lat,
-                                                        item.lng
-                                                    ),
-                                                    style = RobotoRegularWithHexFFFFFF14sp,
-                                                    modifier = Modifier.padding(end = 2.dp)
-                                                )
-                                            }
+                                    Text(
+                                        text = item.address,
+                                        style = RobotoRegularWithHexHex80808016sp,
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Start
+                                    ) {
+                                        if (currentLatitude.doubleValue != 0.0 && currentLongitude.doubleValue != 0.0) {
+                                            Text(
+                                                text = calculateDistanceInKm(
+                                                    currentLatitude.doubleValue,
+                                                    currentLongitude.doubleValue,
+                                                    item.lat,
+                                                    item.lng
+                                                ),
+                                                style = RobotoRegularWithHexHexeef26714sp,
+                                            )
                                         }
+                                        Spacer(modifier = Modifier.weight(1f))
+                                        Text(
+                                            text = String.format(
+                                                Locale.US,
+                                                "%.5f, %.5f",
+                                                item.lat,
+                                                item.lng
+                                            ),
+                                            style = RobotoRegularWithHexFFFFFF14sp,
+                                            modifier = Modifier.padding(end = 2.dp)
+                                        )
                                     }
                                 }
                             }
+                        }
+
+                            // Insert BannerAd every 4 items or at the end
+                        if ((actualIndex + 1) % adFrequency == 0 || actualIndex == exitList.size - 1)
+                        {
+                            var nativeAd by remember { mutableStateOf<NativeAd?>(null) }
+
+                            AndroidView(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight(),
+                                factory = { context ->
+                                    NativeAdView(context).apply {
+                                        val adView = LayoutInflater.from(context).inflate(R.layout.native_ad_layout, this) as NativeAdView
+
+                                        val adLoader = AdLoader.Builder(context, "ca-app-pub-6069496300926751/5719311055")
+                                            .forNativeAd { ad ->
+                                                nativeAd = ad
+
+                                                val headlineView = adView.findViewById<TextView>(R.id.ad_headline)
+                                                val bodyView = adView.findViewById<TextView>(R.id.ad_body)
+                                                val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
+
+                                                headlineView.text = ad.headline
+                                                bodyView.text = ad.body ?: ""
+                                                bodyView.visibility = if (ad.body != null) View.VISIBLE else View.GONE
+
+                                                adView.headlineView = headlineView
+                                                adView.bodyView = bodyView
+                                                adView.mediaView = mediaView
+
+                                                adView.setNativeAd(ad)
+                                            }
+                                            .build()
+
+                                        adLoader.loadAd(AdRequest.Builder().build())
+                                    }
+                                },
+                                update = { view ->
+                                    nativeAd?.let { view.setNativeAd(it) }
+                                }
+                            )
+
                         }
                     }
 
@@ -381,6 +415,7 @@ fun OnExitListScreen(
                         Spacer(modifier = Modifier.height(100.dp))
                     }
                 }
+
 
             }
 

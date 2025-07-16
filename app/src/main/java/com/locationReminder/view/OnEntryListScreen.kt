@@ -1,8 +1,14 @@
 package com.locationReminder.view
 
+import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Geocoder
 import android.location.Location
 import android.os.Looper
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.TextView
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
@@ -10,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
@@ -30,11 +37,19 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
+import com.google.android.gms.ads.AdLoader
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.nativead.MediaView
+import com.google.android.gms.ads.nativead.NativeAd
+import com.google.android.gms.ads.nativead.NativeAdView
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -48,13 +63,17 @@ import com.locationReminder.ui.theme.RobotoRegularWithHexFFFFFF14sp
 import com.locationReminder.ui.theme.RobotoRegularWithHexHex80808016sp
 import com.locationReminder.ui.theme.RobotoRegularWithHexHexeef26714sp
 import com.locationReminder.view.appNavigation.NavigationRoute
+import com.locationReminder.viewModel.AdViewModel
+import com.locationReminder.viewModel.SharedPreferenceVM
+import java.io.IOException
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun OnEntryListScreen(
     navController: NavHostController,
-    addLocationViewModel: AddLocationViewModel
+    addLocationViewModel: AddLocationViewModel,
+    sharedPreferenceVM: SharedPreferenceVM
 )
  {
     val context = LocalContext.current
@@ -71,45 +90,56 @@ fun OnEntryListScreen(
 
 
 
-    if (entryList.isNotEmpty()) {
-        LaunchedEffect(Unit) {
-            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+     LaunchedEffect(Unit) {
+         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
 
-            if (ActivityCompat.checkSelfPermission(
-                    context,
-                    android.Manifest.permission.ACCESS_FINE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(
-                    context,
-                    android.Manifest.permission.ACCESS_COARSE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
+         if (ActivityCompat.checkSelfPermission(
+                 context,
+                 android.Manifest.permission.ACCESS_FINE_LOCATION
+             ) == PackageManager.PERMISSION_GRANTED ||
+             ActivityCompat.checkSelfPermission(
+                 context,
+                 android.Manifest.permission.ACCESS_COARSE_LOCATION
+             ) == PackageManager.PERMISSION_GRANTED
+         ) {
 
-                val locationRequest = LocationRequest.Builder(
-                    Priority.PRIORITY_HIGH_ACCURACY,
-                    5000L
-                ).apply {
-                    setMinUpdateDistanceMeters(5f)
-                }.build()
+             if (entryList.isNotEmpty()) {
+                 val locationRequest = LocationRequest.Builder(
+                     Priority.PRIORITY_HIGH_ACCURACY,
+                     5000L
+                 ).apply {
+                     setMinUpdateDistanceMeters(5f)
+                 }.build()
 
-                val locationCallback = object : LocationCallback() {
-                    override fun onLocationResult(result: LocationResult) {
-                        val location = result.lastLocation
-                        location?.let {
-                            currentLatitude.doubleValue = it.latitude
-                            currentLongitude.doubleValue = it.longitude
-                        }
-                    }
-                }
+                 val locationCallback = object : LocationCallback() {
+                     override fun onLocationResult(result: LocationResult) {
+                         val location = result.lastLocation
+                         location?.let {
+                             currentLatitude.doubleValue = it.latitude
+                             currentLongitude.doubleValue = it.longitude
+                         }
+                     }
 
-                fusedLocationClient.requestLocationUpdates(
-                    locationRequest,
-                    locationCallback,
-                    Looper.getMainLooper()
-                )
-            }
-        }
-    }
+                 }
+
+                 fusedLocationClient.requestLocationUpdates(
+                     locationRequest,
+                     locationCallback,
+                     Looper.getMainLooper()
+                 )
+
+             } else {
+                 fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                     location?.let {
+                         currentLatitude.doubleValue = it.latitude
+                         currentLongitude.doubleValue = it.longitude
+                         val areaName=getArea(context, it.latitude, it.longitude)
+                         sharedPreferenceVM.setArea("Coimbatore")
+                     }
+                 }
+             }
+         }
+     }
 
 
 
@@ -214,75 +244,131 @@ fun OnEntryListScreen(
                 }
 
             } else
-            {
+        {
 
+            val adFrequency = 4
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                itemsIndexed(entryList) { actualIndex, item ->
+                    EntryCard(
+                        item = item,
+                        isSelected = selectedItems.contains(item),
+                        onClick = {
+                            if (isSelectionMode) {
+                                if (selectedItems.contains(item)) selectedItems.remove(item)
+                                else selectedItems.add(item)
+                            } else {
+                                navController.navigate("${NavigationRoute.MAPSCREEN.path}/Entry/${item.id}/${""}/${""}")
+                            }
+                        },
+                        onLongClick = {
+                            if (!selectedItems.contains(item)) selectedItems.add(item)
+                        },
+                        currentLatitude = currentLatitude.doubleValue,
+                        currentLongitude = currentLongitude.doubleValue,
+                        onToggleChange = { newStatus ->
+                            addLocationViewModel.updateCurrentStatus(item.id, newStatus)
+                        }
+                    )
 
-                val adFrequency = 4
+                    if ((actualIndex + 1) % adFrequency == 0 || actualIndex == entryList.size - 1)
+                    {
+                        var nativeAd by remember { mutableStateOf<NativeAd?>(null) }
 
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    val numberOfAds = entryList.size / adFrequency
-                    val shouldShowEndAd = entryList.size % adFrequency != 0
-                    val totalAds = numberOfAds + if (shouldShowEndAd) 1 else 0
-                    val totalCount = entryList.size + totalAds
-
-                    items(totalCount) { index ->
-                        val adInsertedBefore = index / (adFrequency + 1)
-                        if ((index + 1) % (adFrequency + 1) == 0 || // Regular interval ads
-                            (shouldShowEndAd && index == totalCount - 1 && entryList.size % adFrequency != 0) // End ad condition
-                        ) {
-                            Column(
+                            AndroidView(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 8.dp)
-                            ) {
-                                BannerAd()
-                            }
-                        } else {
-                            val actualIndex = index - adInsertedBefore
-                            if (actualIndex < entryList.size) {
-                                val item = entryList[actualIndex]
+                                    .wrapContentHeight(),
+                                factory = { context ->
+                                    NativeAdView(context).apply {
+                                        val adView = LayoutInflater.from(context).inflate(R.layout.native_ad_layout, this) as NativeAdView
 
-                                EntryCard(
-                                    item = item,
-                                    isSelected = selectedItems.contains(item),
-                                    onClick = {
-                                        if (isSelectionMode) {
-                                            if (selectedItems.contains(item)) selectedItems.remove(item)
-                                            else selectedItems.add(item)
-                                        } else {
-                                            navController.navigate("${NavigationRoute.MAPSCREEN.path}/Entry/${item.id}/${""}/${""}")
-                                        }
-                                    },
-                                    onLongClick = {
-                                        if (!selectedItems.contains(item)) selectedItems.add(item)
-                                    },
-                                    currentLatitude = currentLatitude.doubleValue,
-                                    currentLongitude = currentLongitude.doubleValue,
-                                    onToggleChange = { newStatus ->
-                                        addLocationViewModel.updateCurrentStatus(item.id, newStatus)
+                                        val adLoader = AdLoader.Builder(context, "ca-app-pub-6069496300926751/5719311055")
+                                            .forNativeAd { ad ->
+                                                nativeAd = ad
+
+                                                val headlineView = adView.findViewById<TextView>(R.id.ad_headline)
+                                                val bodyView = adView.findViewById<TextView>(R.id.ad_body)
+                                                val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
+
+                                                headlineView.text = ad.headline
+                                                bodyView.text = ad.body ?: ""
+                                                bodyView.visibility = if (ad.body != null) View.VISIBLE else View.GONE
+
+                                                adView.headlineView = headlineView
+                                                adView.bodyView = bodyView
+                                                adView.mediaView = mediaView
+
+                                                adView.setNativeAd(ad)
+                                            }
+                                            .build()
+
+                                        adLoader.loadAd(AdRequest.Builder().build())
                                     }
-                                )
-                            }
-                        }
-                    }
+                                },
+                                update = { view ->
+                                    nativeAd?.let { view.setNativeAd(it) }
+                                }
+                            )
 
-                    item {
-                        Spacer(modifier = Modifier.height(100.dp))
-                    }
+                        }
+
+
                 }
 
 
+                item {
+                    Spacer(modifier = Modifier.height(100.dp))
+                }
             }
+
+
+        }
+
+
 
 
         }
     }
   }
 
- @OptIn(ExperimentalFoundationApi::class)
+
+
+
+fun getArea(context: Context, latitude: Double, longitude: Double): String {
+    val geocoder = Geocoder(context, Locale.getDefault())
+    return try {
+        val addresses = geocoder.getFromLocation(latitude, longitude, 1)
+        val address = addresses?.firstOrNull()
+        val fullAddress = address?.getAddressLine(0) ?: "Unknown Address"
+        val area = address?.locality ?: ""
+        val subLocality = address?.subLocality ?: "Unknown SubLocality"
+        val city = address?.subAdminArea ?: "Unknown City"
+        val state = address?.adminArea ?: "Unknown State"
+        val postalCode = address?.postalCode ?: "Unknown Postal Code"
+        val country = address?.countryName ?: "Unknown Country"
+
+        Log.d("Check_tag_location_", "Full Address: $fullAddress")
+        Log.d("Check_tag_location_", "Area (locality): $area")
+        Log.d("Check_tag_location_", "SubLocality: $subLocality")
+        Log.d("Check_tag_location_", "City (subAdminArea): $city")
+        Log.d("Check_tag_location_", "State: $state")
+        Log.d("Check_tag_location_", "Postal Code: $postalCode")
+        Log.d("Check_tag_location_", "Country: $country")
+        Log.d("**********************************************************************************************" , "")
+
+
+
+        area
+    } catch (e: IOException) {
+        ""
+    }
+}
+
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EntryCard(
     item: LocationDetail,
@@ -405,4 +491,50 @@ fun calculateDistanceInKm(
     } else {
         String.format(Locale.US, "%.1f Km Away", distanceInMeters / 1000)
     }
+}
+
+
+
+@Composable
+private fun AdItem(adPosition: Int, viewModel: AdViewModel) {
+    val ad = viewModel.getCachedAd(adPosition)
+
+    if (ad != null) {
+        NativeAdComposable(ad)
+    } else {
+        LaunchedEffect(adPosition) {
+            viewModel.getNativeAd(
+                position = adPosition,
+                adUnitId = "ca-app-pub-6069496300926751/5719311055",
+                onAdLoaded = {}
+            )
+        }
+    }
+}
+
+@Composable
+fun NativeAdComposable(nativeAd: NativeAd) {
+    AndroidView(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight(),
+        factory = { context ->
+            val adView = LayoutInflater.from(context)
+                .inflate(R.layout.native_ad_layout, null) as NativeAdView
+
+            adView.headlineView = adView.findViewById<TextView>(R.id.ad_headline).apply {
+                text = nativeAd.headline
+            }
+
+            adView.bodyView = adView.findViewById<TextView>(R.id.ad_body).apply {
+                text = nativeAd.body ?: ""
+                visibility = if (nativeAd.body != null) TextView.VISIBLE else TextView.GONE
+            }
+
+            adView.mediaView = adView.findViewById<MediaView>(R.id.ad_media)
+
+            adView.setNativeAd(nativeAd)
+            adView
+        }
+    )
 }

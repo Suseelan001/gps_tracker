@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
-import com.google.gson.Gson
 import com.locationReminder.reponseModel.ContactDetail
 import com.locationReminder.reponseModel.ContactDetailLocal
 import com.locationReminder.ui.theme.Hex222227
@@ -125,12 +124,10 @@ fun AddContactNumberScreen(
     if (showDialog) {
         EditContact(
             onDismiss = {
-                sharedPreferenceVM.setExitListExists(false)
                 handleContactsUpdate(selectedContacts, viewModel, navController)
                 showDialog = false
             },
             onConfirmLogout = {
-                sharedPreferenceVM.setExitListExists(false)
                 viewModel.enableNotificationsForExitType()
                 handleContactsUpdate(selectedContacts, viewModel, navController)
                 showDialog = false

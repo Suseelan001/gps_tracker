@@ -6,7 +6,6 @@ import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
-import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -81,6 +80,7 @@ class AlarmAlertWindow @Inject constructor(
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
                         dX = v.x - event.rawX
+                        v.performClick() // <-- Add this
                         true
                     }
 

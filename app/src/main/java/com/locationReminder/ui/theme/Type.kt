@@ -1,6 +1,5 @@
 package com.locationReminder.ui.theme
 
-import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -62,11 +61,10 @@ var RobotoRegularWithHexFFFFFF14sp: TextStyle = TextStyle(
 )
 
 
-val Typography = Typography(
-    bodyLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp
-    ))
+var InternMediumWithHex3b7ded14sp: TextStyle = TextStyle(
+    fontFamily = FontFamily(Font(R.font.inter_medium)),
+    fontWeight = FontWeight.Normal,
+    fontSize = 14.sp,
+    letterSpacing = TextUnit.Unspecified,
+    color = Hex3b7ded
+)

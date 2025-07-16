@@ -12,7 +12,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.CoroutineDispatcher
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -47,14 +46,13 @@ class AppHiltModule {
     @Named("LOCATION_REMINDER_RETROFIT")
     fun provideConnectedAccountRetrofit(
         @Named("LOCATION_REMINDER_CONTEXT") context: Context, @Named("LOCATION_REMINDER_API_LINK") apiLink: String,
-        @Named("LOCATION_REMINDER_SHARED_PREFERENCES") mySharedPreference: MySharedPreference,
     ): Retrofit {
         val client = OkHttpClient.Builder()
             .connectTimeout(2, TimeUnit.MINUTES)
             .writeTimeout(2, TimeUnit.MINUTES)
             .readTimeout(2, TimeUnit.MINUTES)
             .addInterceptor(ConnectivityInterceptor(context))
-            .addInterceptor(HeaderInterceptor(mySharedPreference = mySharedPreference))
+            .addInterceptor(HeaderInterceptor())
             .addInterceptor(HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY))
             .build()
 

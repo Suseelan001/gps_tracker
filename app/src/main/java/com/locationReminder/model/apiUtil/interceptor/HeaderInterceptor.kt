@@ -1,12 +1,10 @@
 package com.locationReminder.model.apiUtil.interceptor
 
-import com.locationReminder.model.localStorage.MySharedPreference
 import okhttp3.Interceptor
 import okhttp3.Response
-import okio.IOException
 import javax.inject.Inject
 
-class HeaderInterceptor @Inject constructor(private val mySharedPreference: MySharedPreference): Interceptor{
+class HeaderInterceptor @Inject constructor(): Interceptor{
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()

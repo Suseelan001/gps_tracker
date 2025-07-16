@@ -3,6 +3,9 @@ package com.locationReminder.view
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Looper
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.TextView
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
@@ -10,7 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.getValue
@@ -26,15 +29,24 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.navigation.NavHostController
+import com.google.android.gms.ads.AdLoader
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.nativead.MediaView
+import com.google.android.gms.ads.nativead.NativeAd
+import com.google.android.gms.ads.nativead.NativeAdView
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -265,11 +277,10 @@ fun ImportedMarkerListScreen(
 
                 } else
                 {
+                    val itemId = recordId.removePrefix("eq.").toInt()
+                    addImportedCategoryNameViewModel.updateShowImportStatus(itemId, true)
+
                     val adFrequency = 4
-                    val numberOfAds = markerList.size / adFrequency
-                    val shouldShowEndAd = markerList.size % adFrequency != 0
-                    val totalAds = numberOfAds + if (shouldShowEndAd) 1 else 0
-                    val totalCount = markerList.size + totalAds
 
                     LazyColumn(
                         state = listState,
@@ -277,47 +288,72 @@ fun ImportedMarkerListScreen(
                             .fillMaxSize()
                             .padding(bottom = 1.dp)
                     ) {
-                        items(totalCount) { index ->
-                            val adInsertedBefore = index / (adFrequency + 1)
+                        itemsIndexed(markerList) { actualIndex, item ->
+                            // Main item card
+                            ImportedMarkerCard(
+                                item = item,
+                                isSelected = selectedItems.contains(item),
+                                onClick = {
+                                    if (isSelectionMode) {
+                                        if (selectedItems.contains(item)) selectedItems.remove(item)
+                                        else selectedItems.add(item)
+                                    } else {
+                                        navController.navigate("${NavigationRoute.MAPSCREEN.path}/ImportedMarker/${item.id}/${record.id}/${record.categoryName}")
+                                    }
+                                },
+                                onLongClick = {
+                                    if (!selectedItems.contains(item)) selectedItems.add(item)
+                                },
+                                currentLatitude = currentLatitude.doubleValue,
+                                currentLongitude = currentLongitude.doubleValue,
+                                onToggleChange = { newStatus ->
+                                    addLocationViewModel.updateCurrentStatus(item.id, newStatus)
+                                }
+                            )
 
-                            val isAdPosition =
-                                (index + 1) % (adFrequency + 1) == 0 ||
-                                        (shouldShowEndAd && index == totalCount - 1 && markerList.size % adFrequency != 0)
+                            // Inject ad after every 4 items or at the end
+                            if ((actualIndex + 1) % adFrequency == 0 || actualIndex == markerList.size - 1)
+                            {
+                                var nativeAd by remember { mutableStateOf<NativeAd?>(null) }
 
-                            if (isAdPosition) {
-                                // Show a Banner Ad
-                                Box(
+                                AndroidView(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 10.dp)
-                                ) {
-                                    BannerAd()
-                                }
-                            } else {
-                                val actualIndex = index - adInsertedBefore
-                                val item = markerList[actualIndex]
+                                        .wrapContentHeight(),
+                                    factory = { context ->
+                                        NativeAdView(context).apply {
+                                            val adView = LayoutInflater.from(context).inflate(R.layout.native_ad_layout, this) as NativeAdView
 
-                                ImportedMarkerCard(
-                                    item = item,
-                                    isSelected = selectedItems.contains(item),
-                                    onClick = {
-                                        if (isSelectionMode) {
-                                            if (selectedItems.contains(item)) selectedItems.remove(item)
-                                            else selectedItems.add(item)
-                                        } else {
-                                            navController.navigate("${NavigationRoute.MAPSCREEN.path}/ImportedMarker/${item.id}/${record.id}/${record.categoryName}")
+                                            val adLoader = AdLoader.Builder(context, "ca-app-pub-6069496300926751/5719311055")
+                                                .forNativeAd { ad ->
+                                                    nativeAd = ad
+
+                                                    val headlineView = adView.findViewById<TextView>(R.id.ad_headline)
+                                                    val bodyView = adView.findViewById<TextView>(R.id.ad_body)
+                                                    val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
+
+                                                    headlineView.text = ad.headline
+                                                    bodyView.text = ad.body ?: ""
+                                                    bodyView.visibility = if (ad.body != null) View.VISIBLE else View.GONE
+
+                                                    adView.headlineView = headlineView
+                                                    adView.bodyView = bodyView
+                                                    adView.mediaView = mediaView
+
+                                                    adView.setNativeAd(ad)
+                                                }
+                                                .build()
+
+                                            adLoader.loadAd(AdRequest.Builder().build())
                                         }
                                     },
-                                    onLongClick = {
-                                        if (!selectedItems.contains(item)) selectedItems.add(item)
-                                    },
-                                    currentLatitude = currentLatitude.doubleValue,
-                                    currentLongitude = currentLongitude.doubleValue,
-                                    onToggleChange = { newStatus ->
-                                        addLocationViewModel.updateCurrentStatus(item.id, newStatus)
+                                    update = { view ->
+                                        nativeAd?.let { view.setNativeAd(it) }
                                     }
                                 )
+
                             }
+
                         }
                     }
 

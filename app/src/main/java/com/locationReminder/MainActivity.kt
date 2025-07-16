@@ -17,9 +17,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,7 +26,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
@@ -47,7 +44,6 @@ import com.locationReminder.viewModel.SharedPreferenceVM
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.launch
 import androidx.core.net.toUri
-import com.locationReminder.view.BannerAd
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -166,13 +162,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleDeepLink(intent: Intent?) {
+
         if (sharedPreferenceVM.isUserLoggedIn()) {
             val data = intent?.data
             if (data != null && data.scheme == "myapp" && data.host == "imported_marker") {
-                val categoryFolderName = data.getQueryParameter("categoryFolderName")
-                val userId = data.getQueryParameter("user_id")
-                val categoryId = data.getQueryParameter("categoryId")
-                val userName = data.getQueryParameter("userName")
+                val categoryFolderName = data.getQueryParameter("FN")
+                val userId = data.getQueryParameter("UID")
+                val categoryId = data.getQueryParameter("CID")
+                val userName = data.getQueryParameter("UN")
                 if (userId == sharedPreferenceVM.getUserId()) {
                     Toast.makeText(this, "Import other user detail", Toast.LENGTH_SHORT).show()
                     intent.data = null
@@ -189,7 +186,8 @@ class MainActivity : ComponentActivity() {
                                 categoryName = categoryFolderName,
                                 userId = userId,
                                 firstTimeImport = true,
-                                showImport=false
+                                showImport=false,
+                                userName=userName
                             )
                             addImportedCategoryNameViewModel.insertRecord(newRecord)
 
@@ -253,15 +251,12 @@ class MainActivity : ComponentActivity() {
                         BottomBar(
                             navController = navController,
                             state = buttonsVisible,
-                            modifier = Modifier.fillMaxWidth(),
-                            sharedPreferenceVM = sharedPreferenceVM,
-                            context = this@MainActivity
+                            modifier = Modifier.fillMaxWidth()
                         )
-                   // }
                 }
             }
         ) { padding ->
-            NavigationGraph(navController, padding)
+            NavigationGraph(navController)
             LaunchedEffect(Unit) {
                 navGraphInitialized = true
             }
@@ -291,13 +286,12 @@ class MainActivity : ComponentActivity() {
             mandatoryPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
         }
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
+
+        /*    if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
                 != PackageManager.PERMISSION_GRANTED
             ) {
                 mandatoryPermissions.add(Manifest.permission.SEND_SMS)
-            }
-        }
+            }*/
 
 
         if (mandatoryPermissions.isNotEmpty()) {
@@ -334,7 +328,7 @@ class MainActivity : ComponentActivity() {
     private fun promptForBackgroundLocationPermission() {
         AlertDialog.Builder(this)
             .setTitle("Allow Background Location")
-            .setMessage("To trigger geofence alarms even when the app is closed, please allow 'All the time' location in settings.")
+            .setMessage("To trigger alarms even when the app is closed, please allow 'All the time' location in settings.")
             .setPositiveButton("Go to Settings") { _, _ -> openAppSettings() }
             .setNegativeButton("Cancel", null)
             .show()
@@ -377,8 +371,6 @@ class MainActivity : ComponentActivity() {
 
 
 }
-
-
 
 fun ensureDefaultSmsApp(context: Context) {
     val myPackageName = context.packageName

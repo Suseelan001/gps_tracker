@@ -2,11 +2,13 @@
 <resources>
 
     <style name="Theme.LocationReminder" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/ic_launcher</item>
 
     </style>
 
 
     <style name="Theme.MyApp.FullScreen" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+
         <item name="android:windowIsTranslucent">false</item>
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowContentOverlay">@null</item>

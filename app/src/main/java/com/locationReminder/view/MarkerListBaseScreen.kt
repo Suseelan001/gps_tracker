@@ -3,6 +3,9 @@ package com.locationReminder.view
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.TextView
 import android.widget.Toast
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -43,21 +46,36 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.sp
 import com.locationReminder.reponseModel.MarkerUpdateRequest
 import com.locationReminder.ui.theme.Hex222227
 import com.locationReminder.viewModel.AddImportedCategoryNameViewModel
 import com.locationReminder.viewModel.AddLocationViewModel
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.viewinterop.AndroidView
+import com.google.android.gms.ads.AdLoader
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.nativead.MediaView
+import com.google.android.gms.ads.nativead.NativeAd
+import com.google.android.gms.ads.nativead.NativeAdView
+import com.google.gson.Gson
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MarkerListBaseScreen(
@@ -92,8 +110,27 @@ fun MarkerListBaseScreen(
                         Spacer(modifier = Modifier.weight(1f))
 
 
+
+
                         if (sharedPreferenceVM.isUserLoggedIn()) {
-                            if (selectedTabIndex.intValue==0){
+
+                            FloatingActionButton(
+                                onClick = {
+                                    navController.navigate(NavigationRoute.SUGGESTFOLDERLISTSCREEN.path) {
+                                        popUpTo(NavigationRoute.SUGGESTFOLDERLISTSCREEN.path) {
+                                            inclusive = false
+                                        }
+                                        launchSingleTop = true
+                                    }
+                                },
+                                containerColor = Hexeef267,
+                                contentColor = Hex222227,
+                                modifier = Modifier.padding(end = 24.dp, bottom = 12.dp)
+                            ) {
+                                Icon(Icons.Default.Search, contentDescription = "Search")
+                            }
+
+                            if (selectedTabIndex.intValue == 0) {
                                 FloatingActionButton(
                                     onClick = {
                                         navController.navigate("${NavigationRoute.ADDFOLDERNAMESCREEN.path}/${""}/${""}/${""}") {
@@ -116,7 +153,6 @@ fun MarkerListBaseScreen(
 
                     }
                 },
-
 
 
                 colors = TopAppBarDefaults.largeTopAppBarColors(
@@ -158,7 +194,6 @@ fun MarkerListBaseScreen(
                     }
                 }
             } else {
-                // 👇 Pass the remembered tab index down
                 TabBarScreen(
                     navController,
                     addFolderNameViewModel,
@@ -223,7 +258,6 @@ fun TabBarScreen(
         }
     }
 }
-
 
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -295,130 +329,191 @@ fun OwnTabContent(
                 }
 
             } else
-            {
-                val adFrequency = 4
-                val numberOfAds = categoryList.size / adFrequency
-                val shouldShowEndAd = categoryList.size % adFrequency != 0
-                val totalAds = numberOfAds + if (shouldShowEndAd) 1 else 0
-                val totalCount = categoryList.size + totalAds
+
+            {val adFrequency = 4
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(totalCount) { index ->
-                        val adInsertedBefore = index / (adFrequency + 1)
+                    itemsIndexed(categoryList) { actualIndex, item ->
+                        val toggleState = remember { mutableStateOf(item.currentStatus ?: false) }
 
-                        val isAdPosition =
-                            (index + 1) % (adFrequency + 1) == 0 ||
-                                    (shouldShowEndAd && index == totalCount - 1 && categoryList.size % adFrequency != 0)
-
-                        if (isAdPosition) {
-                            Box(
+                        // Main item card
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(100.dp)
+                                .padding(bottom = 16.dp)
+                                .combinedClickable(
+                                    onClick = {
+                                        val categoryTitle = item.categoryName ?: ""
+                                        val id = item.id ?: ""
+                                        navController.navigate("${NavigationRoute.MARKERLISTSCREEN.path}/$categoryTitle/$id")
+                                    },
+                                    onLongClick = {}
+                                ),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Hex36374a
+                            )
+                        ) {
+                            Row(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 16.dp)
+                                    .fillMaxSize()
+                                    .padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                BannerAd()
-                            }
-                        } else {
-                            val actualIndex = index - adInsertedBefore
-                            val item = categoryList[actualIndex]
-
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(100.dp)
-                                    .padding(bottom = 16.dp)
-                                    .combinedClickable(
-                                        onClick = {
-                                            val categoryTitle = item.categoryName ?: ""
-                                            val id = item.id ?: ""
-                                            navController.navigate("${NavigationRoute.MARKERLISTSCREEN.path}/$categoryTitle/$id")
-                                        },
-                                        onLongClick = {}
-                                    ),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Hex36374a
+                                Image(
+                                    painter = painterResource(id = R.drawable.marker),
+                                    contentDescription = "Item Image",
+                                    modifier = Modifier.size(70.dp),
+                                    contentScale = ContentScale.Crop
                                 )
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                Column(
+                                    modifier = Modifier.weight(1f)
                                 ) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.marker),
-                                        contentDescription = "Item Image",
-                                        modifier = Modifier.size(70.dp),
-                                        contentScale = ContentScale.Crop
-                                    )
-
-                                    Spacer(modifier = Modifier.width(12.dp))
-
                                     Text(
                                         text = item.categoryName.toString(),
                                         style = MaterialTheme.typography.titleMedium,
                                         color = Color.White,
-                                        modifier = Modifier.weight(1f)
                                     )
 
-                                    Row(
-                                        horizontalArrangement = Arrangement.End
-                                    ) {
-                                        IconButton(onClick = {
-                                            addFolderNameViewModel.deleteCategoryList(
-                                                "eq.${item.id}",
-                                                "eq.${item.userId}"
-                                            )
-                                        }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = "Delete",
-                                                tint = Color.White
-                                            )
-                                        }
+                                    val textValue = if (!item.userName.isNullOrEmpty()) {
+                                        "By ${item.userName}"
+                                    } else {
+                                        item.areaName ?: ""
+                                    }
 
-                                        IconButton(onClick = {
-                                            navController.navigate("${NavigationRoute.ADDFOLDERNAMESCREEN.path}/${item.id}/${item.categoryName}/${""}")
-                                        }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Edit,
-                                                contentDescription = "Edit",
-                                                tint = Color.White
-                                            )
-                                        }
+                                    Text(
+                                        text = textValue,
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontStyle = FontStyle.Italic,
+                                            fontSize = 12.sp
+                                        ),
+                                        color = Color.Gray,
+                                    )
+                                }
 
-                                        IconButton(onClick = {
-                                            shareDeepLink(
-                                                context,
-                                                item.categoryName.toString(),
-                                                userId,
-                                                item.id.toString(),
-                                                sharedPreferenceVM.getUserName().toString()
-                                            )
-                                        }
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Share,
-                                                contentDescription = "Share",
-                                                tint = Color.White
-                                            )
-                                        }
+                                Row(
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    IconButton(onClick = {
+                                        addFolderNameViewModel.deleteCategoryList("eq.${item.id}", "eq.${item.userId}")
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete",
+                                            tint = Color.White
+                                        )
+                                    }
+
+                                    IconButton(onClick = {
+                                        navController.navigate("${NavigationRoute.ADDFOLDERNAMESCREEN.path}/${item.id}/${item.categoryName}/${""}")
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit",
+                                            tint = Color.White
+                                        )
+                                    }
+
+                                    IconButton(onClick = {
+                                        shareDeepLink(
+                                            context,
+                                            item.categoryName.toString(),
+                                            userId,
+                                            item.id.toString(),
+                                            sharedPreferenceVM.getUserName().toString()
+                                        )
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Share,
+                                            contentDescription = "Share",
+                                            tint = Color.White
+                                        )
                                     }
                                 }
+
+                                Switch(
+                                    checked = toggleState.value,
+                                    onCheckedChange = null,
+                                    modifier = Modifier
+                                        .scale(0.75f)
+                                        .clickable {
+                                            toggleState.value = !toggleState.value
+                                            addFolderNameViewModel.updateCategoryListStatus(
+                                                "eq.${item.id}",
+                                                "eq.${item.userId}",
+                                                toggleState.value
+                                            )
+                                        },
+                                    colors = SwitchDefaults.colors(
+                                        uncheckedThumbColor = Color(0xFFEEF267),
+                                        checkedThumbColor = Color.White,
+                                        uncheckedTrackColor = Color.White,
+                                        checkedTrackColor = Color(0xFFEEF267),
+                                        uncheckedBorderColor = Color.Transparent,
+                                        checkedBorderColor = Color.Transparent
+                                    )
+                                )
                             }
+                        }
+
+                        // Inject BannerAd after every 4 items or at end
+                        if ((actualIndex + 1) % adFrequency == 0 || actualIndex == categoryList.size - 1)
+                        {
+                            var nativeAd by remember { mutableStateOf<NativeAd?>(null) }
+
+                            AndroidView(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight(),
+                                factory = { context ->
+                                    NativeAdView(context).apply {
+                                        val adView = LayoutInflater.from(context).inflate(R.layout.native_ad_layout, this) as NativeAdView
+
+                                        val adLoader = AdLoader.Builder(context, "ca-app-pub-6069496300926751/5719311055")
+                                            .forNativeAd { ad ->
+                                                nativeAd = ad
+
+                                                val headlineView = adView.findViewById<TextView>(R.id.ad_headline)
+                                                val bodyView = adView.findViewById<TextView>(R.id.ad_body)
+                                                val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
+
+                                                headlineView.text = ad.headline
+                                                bodyView.text = ad.body ?: ""
+                                                bodyView.visibility = if (ad.body != null) View.VISIBLE else View.GONE
+
+                                                adView.headlineView = headlineView
+                                                adView.bodyView = bodyView
+                                                adView.mediaView = mediaView
+
+                                                adView.setNativeAd(ad)
+                                            }
+                                            .build()
+
+                                        adLoader.loadAd(AdRequest.Builder().build())
+                                    }
+                                },
+                                update = { view ->
+                                    nativeAd?.let { view.setNativeAd(it) }
+                                }
+                            )
+
                         }
                     }
 
-                    // Final spacer
                     item {
                         Spacer(modifier = Modifier.height(100.dp))
                     }
                 }
 
+
             }
         }
+
     }
 }
 
@@ -501,12 +596,19 @@ fun Modifier.customShimmer(
 }
 
 
-fun shareDeepLink(context: Context, categoryFolderName: String, userId: String, categoryId: String, userName: String) {
+fun shareDeepLink(
+    context: Context,
+    categoryFolderName: String,
+    userId: String,
+    categoryId: String,
+    userName: String
+) {
     val shareText =
-        "Hi! View my shared marker:\nhttps://suseelan001.github.io/gps_tracker/open_marker.html?" +
-                "categoryFolderName=${Uri.encode(categoryFolderName)}" +
-                "&user_id=${Uri.encode(userId)}" +
-                "&categoryId=${Uri.encode(categoryId)}"+"&userName=${Uri.encode(userName)}"
+        "Hi! View my shared marker:\nhttps://gpsalarm.eronpos.com/?" +
+                "FN=${Uri.encode(categoryFolderName)}" +
+                "&UID=${Uri.encode(userId)}" +
+                "&CID=${Uri.encode(categoryId)}" +
+                "&UN=${Uri.encode(userName)}"
 
 
     val sendIntent = Intent().apply {
@@ -532,25 +634,20 @@ fun ImportedTabContent(
 
 
 ) {
-    val context =LocalContext.current
+    val context = LocalContext.current
     var clickedId by remember { mutableStateOf("") }
     val isLoading = remember { mutableStateOf(false) }
-
     val errorMessage by addFolderNameViewModel.errorMessage.observeAsState("")
+
     if (errorMessage == "Record already exist") {
         Toast.makeText(context, "Folder name already exists", Toast.LENGTH_LONG).show()
         addFolderNameViewModel.clearErrorMessage()
-        isLoading.value=false
+        isLoading.value = false
 
     }
 
     val record by addFolderNameViewModel.categoryFolderResponse.observeAsState()
-
-
-
     record?.let {
-
-
         val getAccountList by addLocationViewModel
             .getMarkerListByFolder(clickedId, "ImportedMarker")
             .observeAsState(emptyList())
@@ -563,11 +660,11 @@ fun ImportedTabContent(
         val updatedList = remember(markerList) {
             markerList.map { marker ->
                 MarkerUpdateRequest(
-                    id = addLocationViewModel.generateUniqueId(),
+                    id = addLocationViewModel.generate6DigitUniqueId(),
                     title = marker.title,
                     address = marker.address,
                     category_id = record!!.id.toString(),
-                    category_title = marker.category_title,
+                    category_name = marker.category_name,
                     currentStatus = marker.currentStatus,
                     entryType = "Marker",
                     lat = marker.lat,
@@ -575,30 +672,30 @@ fun ImportedTabContent(
                     radius = marker.radius,
                     sendNotification = true,
                     vibration = false,
-                    user_id =sharedPreferenceVM.getUserId()
+                    user_id = sharedPreferenceVM.getUserId()
                 )
             }
         }
-
+        println("CHECK_TAG_UPDATEDLIST_ " + Gson().toJson(updatedList))
         LaunchedEffect(updatedList) {
             if (updatedList.isNotEmpty()) {
                 addLocationViewModel.updateMarkers(updatedList)
             }
         }
-
-
-
-
     }
+
+
     val successMessage by addLocationViewModel.successMessage.observeAsState("")
 
     if (successMessage == "Record Imported") {
-        isLoading.value=false
-           addImportedCategoryNameViewModel.deleteSingleRecord(clickedId.toInt())
-           addImportedCategoryNameViewModel.deleteMarkerListByFolder(clickedId.toString(),"ImportedMarker")
-           clickedId=""
+        isLoading.value = false
 
-        selectedTabIndex.value=0
+        addImportedCategoryNameViewModel.deleteSingleRecord(clickedId.toInt())
+        addImportedCategoryNameViewModel.deleteMarkerListByFolder(clickedId.toString(), "ImportedMarker")
+
+        clickedId = ""
+        selectedTabIndex.value = 0
+
         addLocationViewModel.clearSuccessMessage()
     }
 
@@ -637,121 +734,136 @@ fun ImportedTabContent(
 
                 }
 
-            } else
-            {
+            } else {
                 val adFrequency = 4
-                val numberOfAds = allRecords.size / adFrequency
-                val shouldShowEndAd = allRecords.size % adFrequency != 0
-                val totalAds = numberOfAds + if (shouldShowEndAd) 1 else 0
-                val totalCount = allRecords.size + totalAds
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(totalCount) { index ->
-                        val adInsertedBefore = index / (adFrequency + 1)
-
-                        val isAdPosition =
-                            (index + 1) % (adFrequency + 1) == 0 ||  // Regular ad interval
-                                    (shouldShowEndAd && index == totalCount - 1 && allRecords.size % adFrequency != 0) // Final ad
-
-                        if (isAdPosition) {
-                            Box(
+                    itemsIndexed(allRecords) { actualIndex, record ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(100.dp)
+                                .padding(bottom = 16.dp)
+                                .clickable {
+                                    navController.navigate("${NavigationRoute.IMPORTEDMARKERLISTSCREEN.path}/${record.id}")
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = Hex36374a
+                            )
+                        ) {
+                            Row(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 10.dp)
+                                    .fillMaxSize()
+                                    .padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                BannerAd()
-                            }
-                        } else {
-                            val actualIndex = index - adInsertedBefore
-                            val record = allRecords[actualIndex]
-
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(100.dp)
-                                    .padding(bottom = 16.dp)
-                                    .combinedClickable(
-                                        onClick = {
-                                            navController.navigate("${NavigationRoute.IMPORTEDMARKERLISTSCREEN.path}/${record.id}")
-                                        },
-                                        onLongClick = { /* no-op */ }
-                                    ),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Hex36374a
+                                Image(
+                                    painter = painterResource(id = R.drawable.marker),
+                                    contentDescription = "Item Image",
+                                    modifier = Modifier.size(70.dp),
+                                    contentScale = ContentScale.Crop
                                 )
-                            ) {
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                Text(
+                                    text = record.categoryName.toString(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color.White,
+                                    modifier = Modifier.weight(1f)
+                                )
+
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    modifier = Modifier.wrapContentWidth(),
+                                    horizontalArrangement = Arrangement.End
                                 ) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.marker),
-                                        contentDescription = "Item Image",
-                                        modifier = Modifier.size(70.dp),
-                                        contentScale = ContentScale.Crop
-                                    )
-
-                                    Spacer(modifier = Modifier.width(12.dp))
-
-                                    Text(
-                                        text = record.categoryName.toString(),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = Color.White,
-                                        modifier = Modifier.weight(1f)
-                                    )
-
-                                    Row(
-                                        modifier = Modifier.wrapContentWidth(),
-                                        horizontalArrangement = Arrangement.End
-                                    ) {
-                                       if (record.showImport == true){
-                                           IconButton(onClick = {
-                                               isLoading.value = true
-                                               clickedId = record.id.toString()
-                                               addFolderNameViewModel.addCategoryList(
-                                                   record.categoryName.toString(),
-                                                   sharedPreferenceVM.getUserId().toString()
-                                               )
-                                           }) {
-                                               Icon(
-                                                   painter = painterResource(id = R.drawable.ic_download),
-                                                   contentDescription = "Download",
-                                                   tint = Color.White
-                                               )
-                                           }
-                                       }
-
+                                    if (record.showImport == true) {
                                         IconButton(onClick = {
-                                            navController.navigate("${NavigationRoute.ADDFOLDERNAMESCREEN.path}/${record.id}/${record.categoryName}/ImportedMarker")
-                                        }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Edit,
-                                                contentDescription = "Edit",
-                                                tint = Color.White
-                                            )
-                                        }
-
-
-                                        IconButton(onClick = {
-                                            addImportedCategoryNameViewModel.deleteSingleRecord(record.id)
-                                            addImportedCategoryNameViewModel.deleteMarkerListByFolder(
-                                                record.id.toString(),
-                                                "ImportedMarker"
+                                            isLoading.value = true
+                                            clickedId = record.id.toString()
+                                            addFolderNameViewModel.addCategoryList(
+                                                record.categoryName.toString(),
+                                                sharedPreferenceVM.getUserId().toString(),
+                                                record.userName.toString()
                                             )
                                         }) {
                                             Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = "Delete",
+                                                painter = painterResource(id = R.drawable.ic_download),
+                                                contentDescription = "Download",
                                                 tint = Color.White
                                             )
                                         }
                                     }
+
+                                    IconButton(onClick = {
+                                        navController.navigate("${NavigationRoute.ADDFOLDERNAMESCREEN.path}/${record.id}/${record.categoryName}/ImportedMarker")
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit",
+                                            tint = Color.White
+                                        )
+                                    }
+
+                                    IconButton(onClick = {
+                                        addImportedCategoryNameViewModel.deleteSingleRecord(record.id)
+                                        addImportedCategoryNameViewModel.deleteMarkerListByFolder(
+                                            record.id.toString(),
+                                            "ImportedMarker"
+                                        )
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete",
+                                            tint = Color.White
+                                        )
+                                    }
                                 }
                             }
+                        }
+
+                        // Inject ad every 4 items or at the end
+                        if ((actualIndex + 1) % adFrequency == 0 || actualIndex == allRecords.size - 1) {
+                            var nativeAd by remember { mutableStateOf<NativeAd?>(null) }
+
+                            AndroidView(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight(),
+                                factory = { context ->
+                                    NativeAdView(context).apply {
+                                        val adView = LayoutInflater.from(context).inflate(R.layout.native_ad_layout, this) as NativeAdView
+
+                                        val adLoader = AdLoader.Builder(context, "ca-app-pub-6069496300926751/5719311055")
+                                            .forNativeAd { ad ->
+                                                nativeAd = ad
+
+                                                val headlineView = adView.findViewById<TextView>(R.id.ad_headline)
+                                                val bodyView = adView.findViewById<TextView>(R.id.ad_body)
+                                                val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
+
+                                                headlineView.text = ad.headline
+                                                bodyView.text = ad.body ?: ""
+                                                bodyView.visibility = if (ad.body != null) View.VISIBLE else View.GONE
+
+                                                adView.headlineView = headlineView
+                                                adView.bodyView = bodyView
+                                                adView.mediaView = mediaView
+
+                                                adView.setNativeAd(ad)
+                                            }
+                                            .build()
+
+                                        adLoader.loadAd(AdRequest.Builder().build())
+                                    }
+                                },
+                                update = { view ->
+                                    nativeAd?.let { view.setNativeAd(it) }
+                                }
+                            )
+
                         }
                     }
 
@@ -759,6 +871,7 @@ fun ImportedTabContent(
                         Spacer(modifier = Modifier.height(100.dp))
                     }
                 }
+
 
             }
         }

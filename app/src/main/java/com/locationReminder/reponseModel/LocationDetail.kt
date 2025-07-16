@@ -16,7 +16,7 @@ data class LocationDetail(
     val lng: Double,
     val sendNotification: Boolean=false,
     val vibration: Boolean=true,
-    var category_title : String? = null,
+    var category_name : String? = null,
     var category_id : String? = null
 
 

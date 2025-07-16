@@ -18,8 +18,6 @@ class SettingsDatabaseRepository @Inject constructor(
     private val settingsDAO: SettingsDAO
 ) {
 
-    fun getSettings(): LiveData<SettingsData?> = settingsDAO.getSettings()
-
     suspend fun getSettingsOnce(): SettingsData? = settingsDAO.getSettingsOnce()
 
     suspend fun insertRecord(data: SettingsData) {

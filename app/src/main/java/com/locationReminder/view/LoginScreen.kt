@@ -4,7 +4,6 @@ package com.locationReminder.view
 import android.util.Patterns
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -44,9 +43,9 @@ import com.locationReminder.ui.theme.Hex3b7ded
 import com.locationReminder.ui.theme.Hexc0d1e1
 import com.locationReminder.R
 import com.locationReminder.ui.theme.Hex222227
-import com.locationReminder.ui.theme.HexFFFFFF
 import com.locationReminder.ui.theme.Hexeef267
 import com.locationReminder.ui.theme.InternBoldWithHex31394f18sp
+import com.locationReminder.ui.theme.InternMediumWithHex3b7ded14sp
 import com.locationReminder.ui.theme.InternRegularWithHexa19da613sp
 import com.locationReminder.view.appNavigation.NavigationRoute
 import com.locationReminder.viewModel.LoginVM
@@ -140,6 +139,22 @@ fun LoginScreen(navHostController: NavHostController, loginVM: LoginVM) {
                 onValueChange = { password = it },
                 hint = "Password"
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Text(
+                text = "Forgot Password?",
+                style = InternMediumWithHex3b7ded14sp,
+                modifier = Modifier
+                    .clickable {
+                        navHostController.navigate(NavigationRoute.CHANGEPASSWORD.path)
+                    }
+                    .padding(end = 24.dp)
+            )
+        }
 
             Spacer(modifier = Modifier.height(32.dp))
 

@@ -182,7 +182,6 @@ fun MapHomeScreenViewAllMap(
                                 entryList.forEach { record ->
                                     val lat = record.lat
                                     val lng = record.lng
-                                    if (lat != null && lng != null) {
                                         val latLng = LatLng(lat, lng)
 
                                         Marker(
@@ -197,7 +196,7 @@ fun MapHomeScreenViewAllMap(
                                             strokeWidth = 2f,
                                             fillColor =if (record.entryType =="Exit")  Color(0x22FF0000) else Color(0x330000FF)
                                         )
-                                    }
+
                                 }
                             }
 

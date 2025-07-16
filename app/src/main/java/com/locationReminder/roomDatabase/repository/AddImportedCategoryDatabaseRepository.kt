@@ -5,7 +5,6 @@ package com.locationReminder.roomDatabase.repository
 
 import androidx.lifecycle.LiveData
 import com.locationReminder.reponseModel.ImportedCategoryNameResponseModel
-import com.locationReminder.reponseModel.LocationDetail
 import com.locationReminder.roomDatabase.dao.ImportedCategoryNameDAO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -62,9 +61,6 @@ class AddImportedCategoryDatabaseRepository @Inject constructor(
     }
 
 
-    suspend fun deleteLocation(location: ImportedCategoryNameResponseModel) {
-        folderNameDAO.deleteRecord(location)
-    }
     suspend fun updateRecord(record: ImportedCategoryNameResponseModel) {
         folderNameDAO.updateRecord(record)
     }

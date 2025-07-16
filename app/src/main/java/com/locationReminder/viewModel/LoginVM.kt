@@ -7,11 +7,14 @@ import androidx.lifecycle.viewModelScope
 import com.locationReminder.model.apiUtil.serviceModel.BaseNetworkSyncClass
 import com.locationReminder.model.apiUtil.utils.NetworkResult
 import com.locationReminder.model.localStorage.MySharedPreference
+import com.locationReminder.reponseModel.CommonResponseModel
 import com.locationReminder.roomDatabase.repository.AddLocationDatabaseRepository
 import com.locationReminder.roomDatabase.repository.UserDatabaseRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.collections.first
+import kotlin.collections.isNullOrEmpty
 
 @HiltViewModel
 class LoginVM @Inject constructor(
@@ -25,6 +28,7 @@ class LoginVM @Inject constructor(
     val userDetail: LiveData<UserDetailResponseModel?> get() = _userDetail
 
 
+
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> get() = _errorMessage
 
@@ -34,9 +38,39 @@ class LoginVM @Inject constructor(
     private val _successMessage = MutableLiveData<String?>()
     val successMessage: LiveData<String?> get() = _successMessage
 
-      fun getAllRecord(): UserDetailResponseModel {
+    fun getAllRecord(): UserDetailResponseModel {
         return userDatabaseRepository.getUserDetail()
     }
+
+    fun updatePassword(email: String,mobile: String,password: String) = viewModelScope.launch {
+        val params = mutableMapOf<String, Any>()
+        params["password"] = password
+        _loading.postValue(true)
+
+        when (val result = baseNetworkCall.updatePassword(email,mobile,params)) {
+            is NetworkResult.Success -> {
+                val users = result.data
+                if (!users.isNullOrEmpty()) {
+                    val user = users.first()
+                    _userDetail.postValue(user)
+
+
+                } else {
+                    _errorMessage.postValue("Check your email or mobile number")
+                }
+                _loading.postValue(false)
+            }
+
+            is NetworkResult.Error -> {
+                _errorMessage.postValue(result.message)
+                _loading.postValue(false)
+            }
+
+            is NetworkResult.Loading -> {
+            }
+        }
+    }
+
 
 
     fun callSignUp(
@@ -56,17 +90,12 @@ class LoginVM @Inject constructor(
                 val users = result.data
                 if (!users.isNullOrEmpty()) {
                     val user = users.first()
-                    if (user.userMail!="USER_ALREADY_EXISTS"){
-                        val localLocations = addLocationDatabaseRepository.getAllRecordsNow()
-                        if (localLocations.isNotEmpty()) {
-                            mySharedPreference.setExitListExists(true)
-                        }
-
+                    if (user.userMail != "USER_ALREADY_EXISTS") {
                         mySharedPreference.saveUserId(user.id!!.toString())
                         mySharedPreference.saveUserName(user.username!!.toString())
                         userDatabaseRepository.insertUser(user)
                         _userDetail.postValue(user)
-                    }else{
+                    } else {
                         _errorMessage.postValue("User already exists")
 
                     }
@@ -106,11 +135,6 @@ class LoginVM @Inject constructor(
                 } else {
                     val user = userList.firstOrNull()
                     user?.let {
-                        val localLocations = addLocationDatabaseRepository.getAllRecordsNow()
-                        if (localLocations.isNotEmpty()) {
-                            mySharedPreference.setExitListExists(true)
-                        }
-
                         mySharedPreference.saveUserId(it.id!!.toString())
                         mySharedPreference.saveUserName(it.username!!.toString())
                         userDatabaseRepository.insertUser(it)
@@ -133,7 +157,6 @@ class LoginVM @Inject constructor(
     }
 
 
-
     fun updateUserLogin(
         userId: String,
         email: String,
@@ -141,7 +164,7 @@ class LoginVM @Inject constructor(
         name: String,
         mobileNumber: String,
 
-    ) = viewModelScope.launch {
+        ) = viewModelScope.launch {
         val params = mutableMapOf<String, Any>()
         params["password"] = password
         params["username"] = name
@@ -149,25 +172,21 @@ class LoginVM @Inject constructor(
 
         _loading.postValue(true)
 
-        when (val result = baseNetworkCall.updateUserLogin("eq.$email",params)) {
+        when (val result = baseNetworkCall.updateUserLogin("eq.$email", params)) {
             is NetworkResult.Success -> {
 
-                    val localLocations = addLocationDatabaseRepository.getAllRecordsNow()
-                    if (localLocations.isNotEmpty()) {
-                        mySharedPreference.setExitListExists(true)
-                    }
 
-                    mySharedPreference.saveUserId(userId)
-                    mySharedPreference.saveUserName(name)
+                mySharedPreference.saveUserId(userId)
+                mySharedPreference.saveUserName(name)
                 userDatabaseRepository.clearUserDB()
-                val userData= UserDetailResponseModel(
-                    id=userId.toInt(),
-                    userMail=email,
-                    username=name,
-                    mobilenumber=mobileNumber
+                val userData = UserDetailResponseModel(
+                    id = userId.toInt(),
+                    userMail = email,
+                    username = name,
+                    mobilenumber = mobileNumber
                 )
-                    userDatabaseRepository.insertUser(userData)
-                _successMessage.value="Login updated"
+                userDatabaseRepository.insertUser(userData)
+                _successMessage.value = "Login updated"
 
 
                 _loading.postValue(false)
@@ -185,13 +204,14 @@ class LoginVM @Inject constructor(
     }
 
 
-
-    fun clearErrorMessage(){
+    fun clearErrorMessage() {
         _errorMessage.postValue(null)
 
     }
 
-    fun clearSuccessMessage() { _successMessage.value = null }
+    fun clearSuccessMessage() {
+        _successMessage.value = null
+    }
 
 }
 

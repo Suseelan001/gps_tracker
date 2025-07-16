@@ -81,7 +81,6 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     val updateResponse: CommonResponseModel? by addSettingsViewModel.updateResponse.observeAsState(initial = null)
-
     LaunchedEffect(updateResponse) {
         updateResponse?.let { data ->
                 if (data.message == "appLogout") {
@@ -184,7 +183,7 @@ fun SettingsScreen(
                 if (sharedPreferenceVM.isUserLoggedIn()) {
                     SettingItem(
                         title = "Profile",
-                        subtitle = ""
+                        subtitle = sharedPreferenceVM.getUserName()
                     ) {
                         navController.navigate(NavigationRoute.PROFILESCREEN.path)
                     }

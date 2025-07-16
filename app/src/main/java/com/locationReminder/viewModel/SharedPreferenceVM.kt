@@ -7,8 +7,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 @HiltViewModel
-class SharedPreferenceVM @Inject constructor(private val mySharedPreference: MySharedPreference
-): ViewModel(){
+class SharedPreferenceVM @Inject constructor(
+    private val mySharedPreference: MySharedPreference
+) : ViewModel() {
 
     fun isUserLoggedIn(): Boolean {
         return !mySharedPreference.getUserId().isNullOrEmpty()
@@ -17,28 +18,25 @@ class SharedPreferenceVM @Inject constructor(private val mySharedPreference: MyS
     fun getUserId(): String {
         return mySharedPreference.getUserId() ?: ""
     }
+
     fun getUserName(): String {
         return mySharedPreference.getUserName() ?: ""
     }
-
-    fun getExitListExists(): Boolean {
-        return mySharedPreference.getExitListExists() == true
-    }
-    fun setExitListExists(value: Boolean) {
-         mySharedPreference.setExitListExists(value)
+    fun getArea(): String {
+        return mySharedPreference.getArea() ?: ""
     }
 
-
+    fun setArea(value: String) {
+        mySharedPreference.setArea(value)
+    }
 
     fun getImportList(): Boolean {
         return mySharedPreference.getImportList() == true
     }
+
     fun setImportList(value: Boolean) {
         mySharedPreference.setImportList(value)
     }
-
-
-
 
 
 

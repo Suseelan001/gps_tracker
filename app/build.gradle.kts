@@ -18,8 +18,8 @@ android {
         applicationId = "com.locationReminder"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.02"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -114,8 +114,10 @@ dependencies {
 
     implementation (libs.androidx.lifecycle.process)
 
+    //ads
     implementation(libs.play.services.ads)
 
+    //firebase crashlytics
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics)
 

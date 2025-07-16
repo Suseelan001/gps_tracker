@@ -27,6 +27,7 @@ import dagger.hilt.android.EntryPointAccessors
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.maps.model.LatLng
+import com.google.gson.Gson
 import com.locationReminder.alarmModel.AlarmHelper
 import com.locationReminder.roomDatabase.dao.SettingsDAO
 import com.locationReminder.view.getAddressFromLatLng
@@ -80,6 +81,7 @@ class LocationService : Service() {
         settingsDAO = entryPoint.settingsDAO()
         alarmHelper = entryPoint.alarmHelper()
 
+        startForegroundServiceNotification()
 
         settingsDAO.getSettings().observe(ProcessLifecycleOwner.get()) { settings ->
             val intervalTime = if (settings != null) {
@@ -98,7 +100,6 @@ class LocationService : Service() {
 
             startLocationUpdates()
 
-            startForegroundServiceNotification()
             loadMonitoredLocations()
         }
 
@@ -180,7 +181,9 @@ class LocationService : Service() {
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     private fun loadMonitoredLocations() {
         locationDao.getAllRecord().observe(ProcessLifecycleOwner.get()) { allLocations ->
-            println("CHECK_TAG_ALL_RECORD_size " + allLocations.size )
+            println("CHECK_TAG_ALL_RECORD_allLocations " + Gson().toJson(allLocations))
+
+
             monitoredLocations = allLocations.filter {
                 it.currentStatus == true &&
                         (it.entryType == "Entry" || it.entryType == "Exit"|| it.entryType == "Marker"|| it.entryType == "ImportedMarker")

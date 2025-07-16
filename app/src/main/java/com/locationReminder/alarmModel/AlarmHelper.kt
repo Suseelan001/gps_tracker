@@ -119,7 +119,6 @@ class AlarmHelper @Inject constructor(
             if (activity is AlarmActivity) {
                 activity.finish()
             }
-            //launchMainActivity()
             updateLocationStatusToFalse(locationId)
 
             val status = locationDAO.isMarkerOfTypeExists(locationId, "Marker")

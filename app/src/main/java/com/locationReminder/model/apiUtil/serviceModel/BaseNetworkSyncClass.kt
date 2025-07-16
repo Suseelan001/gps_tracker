@@ -2,11 +2,13 @@ package com.locationReminder.model.apiUtil.serviceModel
 
 import com.locationReminder.model.apiUtil.utils.BaseApiResponse
 import com.locationReminder.model.apiUtil.utils.NetworkResult
+import com.locationReminder.reponseModel.AreaList
 import com.locationReminder.reponseModel.CategoryFolderResponseModel
 import com.locationReminder.reponseModel.LocationDetail
 import com.locationReminder.reponseModel.MarkerUpdateRequest
+import com.locationReminder.reponseModel.SuggestionsCategoryListResponseModel
+import com.locationReminder.reponseModel.SuggestionsList
 import com.locationReminder.viewModel.UserDetailResponseModel
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.ResponseBody
@@ -60,6 +62,35 @@ class BaseNetworkSyncClass @Inject constructor(
             }
         }
     }
+    suspend fun getSuggestionsCategoryList(areaId: String,searchKey: String): NetworkResult<List<SuggestionsCategoryListResponseModel>> {
+        return withContext(Dispatchers.Default) {
+            safeApiCall {
+                apiService.getSuggestionsCategoryList(areaId,searchKey)
+            }
+        }
+    }
+    suspend fun getAreaId(areaName: String): NetworkResult<List<AreaList>> {
+        return withContext(Dispatchers.Default) {
+            safeApiCall {
+                apiService.getAreaId(areaName)
+            }
+        }
+    }
+    suspend fun getSuggestionsList(categoryId: String): NetworkResult<List<SuggestionsList>> {
+        return withContext(Dispatchers.Default) {
+            safeApiCall {
+                apiService.getSuggestionsList(categoryId)
+            }
+        }
+    }
+
+    suspend fun getSuggestionsRecord(recordId: String): NetworkResult<List<SuggestionsList>> {
+        return withContext(Dispatchers.Default) {
+            safeApiCall {
+                apiService.getSuggestionsRecord(recordId)
+            }
+        }
+    }
 
     suspend fun getImportedMarkerList(categoryId: String,userId: String): NetworkResult<List<LocationDetail>> {
         return withContext(Dispatchers.Default) {
@@ -92,6 +123,14 @@ class BaseNetworkSyncClass @Inject constructor(
         return withContext(Dispatchers.Default) {
             safeApiCall {
                 apiService.addCategoryList(map)
+            }
+        }
+    }
+
+    suspend fun updateCategoryListStatus(categoryId: String, map: Map<String, Any>): NetworkResult<List<CategoryFolderResponseModel>> {
+        return withContext(Dispatchers.Default) {
+            safeApiCall {
+                apiService.updateCategoryListStatus(categoryId,map)
             }
         }
     }
@@ -131,10 +170,25 @@ class BaseNetworkSyncClass @Inject constructor(
             }
         }
     }
+    suspend fun updateAllMarkerStatus(categoryId: String, userId: String, map: Map<String, Any>): NetworkResult<ResponseBody> {
+        return withContext(Dispatchers.Default) {
+            safeApiCall {
+                apiService.updateAllMarkerStatus(categoryId,userId,map)
+            }
+        }
+    }
     suspend fun deleteAllMarker(categoryId: String,userId: String): NetworkResult<ResponseBody> {
         return withContext(Dispatchers.Default) {
             safeApiCall {
                 apiService.deleteAllMarker(categoryId,userId)
+            }
+        }
+    }
+
+    suspend fun updatePassword(email: String, mobile: String,map: Map<String, Any>):NetworkResult<List<UserDetailResponseModel>> {
+        return withContext(Dispatchers.Default) {
+            safeApiCall {
+                apiService.updatePassword(email,mobile,map)
             }
         }
     }

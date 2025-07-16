@@ -1,17 +1,8 @@
 package com.locationReminder.view.appNavigation
 
-import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -26,20 +17,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.locationReminder.ui.theme.Hex222227
 import com.locationReminder.ui.theme.Hex36374a
 import com.locationReminder.ui.theme.HexFFFFFF
 import com.locationReminder.ui.theme.Hexeef267
-import com.locationReminder.viewModel.SharedPreferenceVM
 
 
 @Composable
 fun BottomBar(
     navController: NavHostController,
     state: MutableState<Boolean>,
-    modifier: Modifier = Modifier,
-    sharedPreferenceVM:SharedPreferenceVM,
-    context: Context) {
+    modifier: Modifier = Modifier
+) {
     val screens = listOf(Destinations.HOME, Destinations.BOOKINGS, Destinations.TRANSACTIONS, Destinations.SETTINGS)
     val bottomBarHeight = 120.dp
 

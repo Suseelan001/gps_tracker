@@ -7,7 +7,6 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.locationReminder.reponseModel.CategoryFolderResponseModel
-import com.locationReminder.reponseModel.ContactDetail
 
 
 @Dao

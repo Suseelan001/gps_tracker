@@ -1,6 +1,5 @@
 package com.locationReminder.view
 
-import android.app.Activity
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -27,7 +26,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -37,7 +35,6 @@ import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -49,11 +46,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.core.graphics.toColorInt
-import androidx.core.view.WindowCompat
 import com.locationReminder.reponseModel.ContactDetail
 import com.locationReminder.ui.theme.Hex222227
 import com.locationReminder.ui.theme.Hex36374a
+import com.locationReminder.ui.theme.HexFFFFFF
 import com.locationReminder.ui.theme.Hexeef267
 import com.locationReminder.ui.theme.RobotoMediumWithHexFFFFFF18sp
 import com.locationReminder.ui.theme.RobotoRegularWithHexHex80808016sp
@@ -67,7 +63,7 @@ fun ContactNumberListScreen(
     navController: NavHostController,
     addContactViewModel: AddContactViewModel
 ) {
-    val context = LocalContext.current
+    LocalContext.current
     val allRecords by addContactViewModel.getAllRecord().observeAsState(emptyList())
 
 
@@ -159,6 +155,19 @@ fun ContactNumberListScreen(
                         }
                     )
                 }
+
+                if (allRecords.isNotEmpty()){
+                    item {
+                        Text("SMS will be sent automatically to emergency contacts when the user exits the predefined location",
+                            color = HexFFFFFF,
+                            style = RobotoMediumWithHexFFFFFF18sp,
+                            modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp))
+                    }
+                }
+
+
             }
         }
     }

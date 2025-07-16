@@ -1,9 +1,12 @@
 package com.locationReminder.model.apiUtil.serviceModel
 
 
+import com.locationReminder.reponseModel.AreaList
 import com.locationReminder.reponseModel.CategoryFolderResponseModel
 import com.locationReminder.reponseModel.LocationDetail
 import com.locationReminder.reponseModel.MarkerUpdateRequest
+import com.locationReminder.reponseModel.SuggestionsCategoryListResponseModel
+import com.locationReminder.reponseModel.SuggestionsList
 import com.locationReminder.viewModel.UserDetailResponseModel
 import okhttp3.ResponseBody
 import retrofit2.Response
@@ -18,11 +21,9 @@ import retrofit2.http.Query
 interface ApiService {
 
 
-
     @POST("rpc/register_user")
     @JvmSuppressWildcards
     suspend fun callSignUp(@Body params: Map<String, Any>): Response<List<UserDetailResponseModel>>
-
 
 
     @POST("rpc/login_user")
@@ -32,9 +33,17 @@ interface ApiService {
 
     @PATCH("user")
     @JvmSuppressWildcards
-    suspend fun updateUserLogin(@Query("user_mail") mail: String, @Body params: Map<String,Any>): Response<ResponseBody>
+    suspend fun updateUserLogin(@Query("user_mail") mail: String, @Body params: Map<String, Any>): Response<ResponseBody>
+
+
+    @PATCH("user")
+    @Headers("Prefer: return=representation")
+    @JvmSuppressWildcards
+    suspend fun updatePassword(@Query("user_mail") mail: String, @Query("mobilenumber") mobile: String, @Body params: Map<String, Any>): Response<List<UserDetailResponseModel>>
+
 
     //Marker list ADD  GET DELETE
+
     @POST("marker_list")
     @JvmSuppressWildcards
     suspend fun addMarkerList(@Body params: Map<String, Any>): Response<List<LocationDetail>>
@@ -43,13 +52,22 @@ interface ApiService {
     @JvmSuppressWildcards
     suspend fun getMarkerList(@Query("category_id") categoryId: String, @Query("user_id") userId: String): Response<List<LocationDetail>>
 
+
     @GET("marker_list?select=*")
     @JvmSuppressWildcards
     suspend fun getImportedMarkerList(@Query("category_id") categoryTitle: String, @Query("user_id") userId: String): Response<List<LocationDetail>>
 
 
-    @POST ("marker_list?")
+/*
+    @POST("marker_list?")
     @Headers("Prefer: return=representation")
+    @JvmSuppressWildcards
+    suspend fun updateMarkers(@Body markers: List<MarkerUpdateRequest>): Response<List<LocationDetail>>
+
+*/
+
+    @POST("marker_list?on_conflict=id")
+    @Headers("Prefer: resolution=merge-duplicates, return=representation")
     @JvmSuppressWildcards
     suspend fun updateMarkers(@Body markers: List<MarkerUpdateRequest>): Response<List<LocationDetail>>
 
@@ -63,25 +81,34 @@ interface ApiService {
 
 
     @PATCH("marker_list")
-    suspend fun editMarker(
-        @Query("id") filter: String,
-        @Body params: Map<String, @JvmSuppressWildcards Any>
-    ): Response<ResponseBody>
+    suspend fun editMarker(@Query("id") filter: String, @Body params: Map<String, @JvmSuppressWildcards Any>): Response<ResponseBody>
 
 
     @PATCH("marker_list")
-    suspend fun updateMarkerStatus(
-        @Query("id") filter: String,
-        @Body params: Map<String, @JvmSuppressWildcards Any>
-    ): Response<ResponseBody>
+    suspend fun updateMarkerStatus(@Query("id") filter: String, @Body params: Map<String, @JvmSuppressWildcards Any>): Response<ResponseBody>
+
+
+    @PATCH("marker_list?select=*")
+    suspend fun updateAllMarkerStatus(@Query("category_id") categoryId: String, @Query("user_id") userId: String, @Body params: Map<String, @JvmSuppressWildcards Any>): Response<ResponseBody>
 
 
     //CategoryList ADD GET EDIT DELETE
 
-    @POST("category_list")
+/*    @POST("category_list")
     @Headers("Prefer: return=representation")
     @JvmSuppressWildcards
+    suspend fun addCategoryList(@Body params: Map<String, Any>): Response<List<CategoryFolderResponseModel>>*/
+
+
+
+    @POST("category_list?on_conflict=category_name,user_id&select=*")
+    @Headers("Prefer: resolution=merge-duplicates,return=representation")
+    @JvmSuppressWildcards
     suspend fun addCategoryList(@Body params: Map<String, Any>): Response<List<CategoryFolderResponseModel>>
+
+    @PATCH("category_list")
+    suspend fun updateCategoryListStatus(@Query("id") id: String, @Body params: Map<String, @JvmSuppressWildcards Any>): Response<List<CategoryFolderResponseModel>>
+
 
     @GET("category_list")
     @JvmSuppressWildcards
@@ -91,9 +118,31 @@ interface ApiService {
     suspend fun deleteCategory(@Query("id") filter: String): Response<ResponseBody>
 
     @PATCH("category_list")
-    suspend fun editCategory(
-        @Query("id") filter: String,
-        @Body params: Map<String, @JvmSuppressWildcards Any>
-    ): Response<ResponseBody>
+    suspend fun editCategory(@Query("id") filter: String, @Body params: Map<String, @JvmSuppressWildcards Any>): Response<ResponseBody>
+
+
+    //Suggestions category list
+
+    @GET("suggestions_category_list?select=*")
+    @JvmSuppressWildcards
+    suspend fun getSuggestionsCategoryList(@Query("area_Id") areaName: String,@Query("category_name") searchKey: String): Response<List<SuggestionsCategoryListResponseModel>>
+
+    // suggestions list
+
+    @GET("suggestions_list?select=*")
+    @JvmSuppressWildcards
+    suspend fun getSuggestionsList(@Query("category_id") categoryId: String): Response<List<SuggestionsList>>
+
+
+    @GET("suggestions_list?select=*")
+    @JvmSuppressWildcards
+    suspend fun getSuggestionsRecord(@Query("id") recordId: String): Response<List<SuggestionsList>>
+
+    // area list
+
+    @GET("area_list")
+    @JvmSuppressWildcards
+    suspend fun getAreaId(@Query("area_Name") areaName: String): Response<List<AreaList>>
+
 
 }

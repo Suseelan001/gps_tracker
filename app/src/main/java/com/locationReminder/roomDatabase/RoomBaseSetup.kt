@@ -17,7 +17,7 @@ import com.locationReminder.roomDatabase.dao.UserDao
 import com.locationReminder.viewModel.UserDetailResponseModel
 
 @Database(
-    version = 37,
+    version = 41,
     exportSchema = false,
     entities = [
         LocationDetail::class,
@@ -26,8 +26,6 @@ import com.locationReminder.viewModel.UserDetailResponseModel
         UserDetailResponseModel::class,
         CategoryFolderResponseModel::class,
         ImportedCategoryNameResponseModel::class
-
-
     ]
 )
 

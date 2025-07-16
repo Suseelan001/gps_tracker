@@ -48,10 +48,6 @@ class AddLocationDatabaseRepository @Inject constructor(
         return locationDAO.getAllRecord( )
     }
 
-     fun getAllRecordsNow(): List<LocationDetail> {
-        return locationDAO.getAllRecordsNow()
-    }
-
 
     fun getMarkerListByFolder(categoryId: String,type: String): LiveData<List<LocationDetail>>? {
         return locationDAO.getMarkerListByFolder(categoryId,type)
