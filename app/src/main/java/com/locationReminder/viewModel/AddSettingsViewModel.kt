@@ -4,6 +4,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.locationReminder.model.apiUtil.serviceModel.BaseNetworkSyncClass
+import com.locationReminder.model.apiUtil.utils.NetworkResult
 import com.locationReminder.model.localStorage.MySharedPreference
 import com.locationReminder.reponseModel.CommonResponseModel
 import com.locationReminder.reponseModel.SettingsData
@@ -26,11 +28,39 @@ class AddSettingsViewModel @Inject constructor(
     private val addImportedCategoryDatabaseRepository: AddImportedCategoryDatabaseRepository,
     private val addLocationDatabaseRepository: AddLocationDatabaseRepository,
     private val userDatabaseRepository: UserDatabaseRepository,
+    private val baseNetworkCall: BaseNetworkSyncClass,
+
 
     ) : ViewModel() {
 
     private val _updateResponse = MutableLiveData<CommonResponseModel?>()
     val updateResponse: LiveData<CommonResponseModel?> get() = _updateResponse
+
+    private val _successMessage = MutableLiveData<String?>()
+    val successMessage: LiveData<String?> get() = _successMessage
+
+
+    fun callLogout(id: String ) = viewModelScope.launch {
+        val params = mutableMapOf<String, Any>()
+
+        params["fcm_token"] = ""
+
+
+        when (baseNetworkCall.callLogout(id,params)) {
+            is NetworkResult.Success -> {
+                _successMessage.value = "Logout updated"
+            }
+
+            is NetworkResult.Error -> {
+                _successMessage.value = "Logout error"
+
+
+            }
+
+            is NetworkResult.Loading -> {
+            }
+        }
+    }
 
 
     fun clearUserDB() {
@@ -38,6 +68,9 @@ class AddSettingsViewModel @Inject constructor(
             settingsDatabaseRepository.clearUserDB()
         }
     }
+
+    fun clearSuccessMessage() { _successMessage.value = null }
+
 
     fun getAllRecord(): LiveData<SettingsData> {
         return settingsDatabaseRepository.getAllRecord()

@@ -46,11 +46,20 @@ class MySharedPreference @Inject constructor(context: Context) {
         editor.commit()
     }
 
+
+
     fun getImportList(): Boolean? {
         return sharedPreference.getBoolean("IMPORT_LIST", false)
     }
 
+    fun getNewUser(): Boolean? {
+        return sharedPreference.getBoolean("IS_NEW_USER", true)
+    }
 
+    fun setNewUser(value: Boolean) {
+        editor.putBoolean("IS_NEW_USER", value)
+        editor.commit()
+    }
 
     fun clearAll() {
         editor.putString("USER-ID", null)

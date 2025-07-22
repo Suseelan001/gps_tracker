@@ -1,4 +1,6 @@
 [versions]
+accompanistPager = "0.28.0"
+accompanistPagerIndicators = "0.28.0"
 accompanistSystemuicontroller = "0.34.0"
 accompanistSystemuicontrollerVersion = "0.32.0"
 agp = "8.7.3"
@@ -6,6 +8,7 @@ coilCompose = "2.7.0"
 constraintlayoutCompose = "1.1.0"
 converterGson = "2.11.0"
 firebaseBom = "33.16.0"
+firebaseMessaging = "24.1.2"
 googleAccompanistSystemuicontroller = "<version>"
 googleAccompanistSystemuicontrollerVersion = "0.34.0-alpha"
 hiltAndroid = "2.51.1"
@@ -38,6 +41,8 @@ roomRuntime = "2.7.1"
 runtimeLivedata = "1.8.0"
 
 [libraries]
+accompanist-pager-indicators = { module = "com.google.accompanist:accompanist-pager-indicators", version.ref = "accompanistPagerIndicators" }
+accompanist-pager = { module = "com.google.accompanist:accompanist-pager", version.ref = "accompanistPager" }
 accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller" }
 accompanist-systemuicontroller-v0320 = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "accompanistSystemuicontrollerVersion" }
 accompanist-systemuicontroller-v0340alpha = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "googleAccompanistSystemuicontrollerVersion" }
@@ -57,6 +62,7 @@ com-google-accompanist-accompanist-systemuicontroller = { module = "com.google.a
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebaseMessaging" }
 google-accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "accompanistSystemuicontroller" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
 hilt-android-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hiltAndroidCompiler" }

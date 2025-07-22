@@ -27,7 +27,6 @@ import dagger.hilt.android.EntryPointAccessors
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.maps.model.LatLng
-import com.google.gson.Gson
 import com.locationReminder.alarmModel.AlarmHelper
 import com.locationReminder.roomDatabase.dao.SettingsDAO
 import com.locationReminder.view.getAddressFromLatLng
@@ -181,7 +180,7 @@ class LocationService : Service() {
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     private fun loadMonitoredLocations() {
         locationDao.getAllRecord().observe(ProcessLifecycleOwner.get()) { allLocations ->
-            println("CHECK_TAG_ALL_RECORD_allLocations " + Gson().toJson(allLocations))
+           // println("CHECK_TAG_ALL_RECORD_allLocations " + Gson().toJson(allLocations))
 
 
             monitoredLocations = allLocations.filter {

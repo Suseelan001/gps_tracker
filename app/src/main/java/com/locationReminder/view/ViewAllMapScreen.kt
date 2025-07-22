@@ -32,6 +32,7 @@ import androidx.core.app.ActivityCompat
 import androidx.navigation.NavHostController
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.Circle
@@ -169,7 +170,10 @@ fun MapHomeScreenViewAllMap(
                             ) {
                                 // Optional: Individual marker and circle (e.g., selected marker)
                                 markerPosition?.let {
-                                    Marker(state = MarkerState(position = it))
+                                    Marker(
+                                        state = MarkerState(position = it),
+                                        icon = BitmapFromVector(context, R.drawable.marker_icon)
+                                    )
                                     Circle(
                                         center = it,
                                         radius = circleRadius.toDouble(),
@@ -187,6 +191,8 @@ fun MapHomeScreenViewAllMap(
                                         Marker(
                                             state = MarkerState(position = latLng),
                                             title = record.title,
+                                            icon = BitmapFromVector(context, R.drawable.marker_icon)
+
                                         )
 
                                         Circle(

@@ -119,10 +119,12 @@ class LoginVM @Inject constructor(
     fun callLogin(
         email: String,
         password: String,
+        fcmToken: String
     ) = viewModelScope.launch {
         val params = mutableMapOf<String, Any>()
-        params["email"] = email
-        params["pass"] = password
+        params["in_email"] = email
+        params["in_pass"] = password
+        params["in_fcm_token"] = fcmToken
 
         _loading.postValue(true)
 

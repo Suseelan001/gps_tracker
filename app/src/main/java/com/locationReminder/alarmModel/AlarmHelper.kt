@@ -18,6 +18,7 @@ import com.locationReminder.roomDatabase.dao.LocationDAO
 import com.locationReminder.R
 import com.locationReminder.model.apiUtil.serviceModel.ApiService
 import com.locationReminder.model.localStorage.MySharedPreference
+import com.locationReminder.reponseModel.NotifyEmergencyRequest
 import com.locationReminder.roomDatabase.dao.ContactDAO
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -84,7 +85,9 @@ class AlarmHelper @Inject constructor(
         }
 
         if (location.sendNotification) {
-            sendSmsToAllContacts(mySharedPreference, contactDAO, address)
+            sendFcmToEmergencyContacts(mySharedPreference,contactDAO,address,apiService)
+
+       //     sendSmsToAllContacts(mySharedPreference, contactDAO, address)
         }
 
         val fullScreenIntent = Intent(context, AlarmActivity::class.java).apply {
@@ -215,6 +218,44 @@ class AlarmHelper @Inject constructor(
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
 }
+
+
+private suspend fun sendFcmToEmergencyContacts(
+    mySharedPreference: MySharedPreference,
+    contactDAO: ContactDAO,
+    address: String,
+    apiService: ApiService
+) {
+    val contacts = contactDAO.getAllContacts()
+
+    val phoneList = contacts.map {
+        it.mobileNumber
+            .trim()
+            .replace(" ", "")
+            .removePrefix("+91")
+            .removePrefix("91")
+    }
+
+    val request = NotifyEmergencyRequest(
+        emergency_numbers = phoneList,
+        address = address,
+        from_user_id = mySharedPreference.getUserName().toString()
+    )
+
+    try {
+        val response = apiService.notifyEmergencyContacts(request)
+
+        if (response.isSuccessful) {
+            Log.i("AlarmHelper", "Notification sent successfully: ${response.body()?.string()}")
+        } else {
+            Log.e("AlarmHelper", "Notification failed: ${response.code()} - ${response.errorBody()?.string()}")
+        }
+
+    } catch (e: Exception) {
+        Log.e("AlarmHelper", "Failed to notify contacts: ${e.message}", e)
+    }
+}
+
 
 
 fun sendSmsToAllContacts(mySharedPreference: MySharedPreference, contactDAO: ContactDAO,address: String) {

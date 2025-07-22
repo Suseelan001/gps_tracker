@@ -19,17 +19,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,7 +54,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavHostController
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -61,36 +72,47 @@ import com.locationReminder.view.appNavigation.NavigationRoute
 import com.locationReminder.viewModel.AddSettingsViewModel
 import com.locationReminder.viewModel.SharedPreferenceVM
 
+
+
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.painter.Painter
+
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.locationReminder.R
+import com.locationReminder.ui.theme.HexFFFFFF
+
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(
     navController: NavHostController,
     addSettingsViewModel: AddSettingsViewModel,
-    sharedPreferenceVM:SharedPreferenceVM
+    sharedPreferenceVM: SharedPreferenceVM
 ) {
     val selectedItems = remember { mutableStateListOf<LocationDetail>() }
     val isSelectionMode = selectedItems.isNotEmpty()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    val showMenu = remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
     var showDistanceDialog by remember { mutableStateOf(false) }
     var showLocationUpdateIntervalDialog by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
-    var LogoutDialog by remember { mutableStateOf(false) }
+    var logoutDialog by remember { mutableStateOf(false) }
+
     var selectedUnit by remember { mutableStateOf("") }
     var selectedLocationUpdateInterval by remember { mutableStateOf("") }
-    val context = LocalContext.current
-
-    val updateResponse: CommonResponseModel? by addSettingsViewModel.updateResponse.observeAsState(initial = null)
-    LaunchedEffect(updateResponse) {
-        updateResponse?.let { data ->
-                if (data.message == "appLogout") {
-                    Toast.makeText(context, "Successfully logged out", Toast.LENGTH_SHORT).show()
-                  navController.popBackStack()
-                }
-
-        }
-
-    }
 
     var entry by remember { mutableStateOf("") }
     var exit by remember { mutableStateOf("") }
@@ -100,30 +122,29 @@ fun SettingsScreen(
     var exitDialog by remember { mutableStateOf("") }
     var maxDialog by remember { mutableStateOf("") }
 
+    val settingsRecord by addSettingsViewModel.getAllRecord().observeAsState()
+
+    val updateResponse by addSettingsViewModel.updateResponse.observeAsState(initial = null)
+    val successMessage by addSettingsViewModel.successMessage.observeAsState("")
+
     val listState = rememberLazyListState()
     val isScrolled by remember {
         derivedStateOf {
-            val firstVisibleItem = listState.firstVisibleItemIndex
-            val scrollOffset = listState.firstVisibleItemScrollOffset
-            firstVisibleItem > 0 || scrollOffset > 0
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
         }
     }
-
-
-
-    val settingsRecord by addSettingsViewModel.getAllRecord().observeAsState()
 
     LaunchedEffect(Unit) {
         addSettingsViewModel.ensureDefaultSettingsInserted()
     }
 
     LaunchedEffect(settingsRecord) {
-        settingsRecord?.let { record ->
-            selectedUnit = record.unit
-            selectedLocationUpdateInterval = record.locationUpdateInterval
-            entry = record.entryRadius
-            exit = record.exitRadius
-            max = record.maximumRadius
+        settingsRecord?.let {
+            selectedUnit = it.unit
+            selectedLocationUpdateInterval = it.locationUpdateInterval
+            entry = it.entryRadius
+            exit = it.exitRadius
+            max = it.maximumRadius
         }
     }
 
@@ -135,13 +156,29 @@ fun SettingsScreen(
         }
     }
 
+    LaunchedEffect(updateResponse) {
+        updateResponse?.let {
+            if (it.message == "appLogout") {
+                Toast.makeText(context, "Successfully logged out", Toast.LENGTH_SHORT).show()
+                navController.popBackStack()
+            }
+        }
+    }
+
+    if (successMessage == "Logout updated") {
+        addSettingsViewModel.appLogout()
+    } else if (successMessage == "Logout error") {
+        logoutDialog = false
+        addSettingsViewModel.clearSuccessMessage()
+        Toast.makeText(context, "Something went wrong. Please try again", Toast.LENGTH_SHORT).show()
+    }
+
     Scaffold(
         topBar = {
             LargeTopAppBar(
                 title = {
                     Text(
-                        if (isSelectionMode) "${selectedItems.size} selected"
-                        else "Settings",
+                        if (isSelectionMode) "${selectedItems.size} selected" else "Settings",
                         color = Color.White
                     )
                 },
@@ -149,10 +186,6 @@ fun SettingsScreen(
                     if (isSelectionMode) {
                         IconButton(onClick = { /* Handle delete */ }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
-                        }
-                    } else if (isScrolled) {
-                        IconButton(onClick = { showMenu.value = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Menu", tint = Color.White)
                         }
                     }
                 },
@@ -167,161 +200,162 @@ fun SettingsScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
     ) { paddingValues ->
 
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .background(Hex222227)
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Hex222227)
-                    .padding(horizontal = 20.dp)
+            if (sharedPreferenceVM.isUserLoggedIn()) {
+                SettingItem(
+                    painter = painterResource(id = R.drawable.ic_profile),
+                    title = "Profile",
+                    subtitle = sharedPreferenceVM.getUserName()
+                ) {
+                    navController.navigate(NavigationRoute.PROFILESCREEN.path)
+                }
+            }
+
+            SettingItem(
+                painter = painterResource(id = R.drawable.ic_unitsicon),
+                title = "Units",
+                subtitle = selectedUnit
             ) {
+                showDistanceDialog = true
+            }
 
-                if (sharedPreferenceVM.isUserLoggedIn()) {
-                    SettingItem(
-                        title = "Profile",
-                        subtitle = sharedPreferenceVM.getUserName()
-                    ) {
-                        navController.navigate(NavigationRoute.PROFILESCREEN.path)
-                    }
-                }
-                SettingItem(title = "Units", subtitle = selectedUnit) {
-                    showDistanceDialog = true
-                }
+            SettingItem(
+                painter = painterResource(id = R.drawable.ic_location_update),
+                title = "Location update interval",
+                subtitle = selectedLocationUpdateInterval
+            ) {
+                showLocationUpdateIntervalDialog = true
+            }
 
+            SettingItem(
+                painter = painterResource(id = R.drawable.ic_location_range),
+                title = "Default alarm area",
+                subtitle = "$entry m, $exit m, $max m"
+            ) {
+                showDialog = true
+            }
 
+            if (sharedPreferenceVM.isUserLoggedIn()) {
                 SettingItem(
-                    title = "Location update interval",
-                    subtitle = selectedLocationUpdateInterval
-                ) {
-                    showLocationUpdateIntervalDialog = true
-                }
-
-                SettingItem(
-                    title = "Default alarm area",
-                    subtitle = "$entry m, $exit m, $max m"
-                ) {
-                    showDialog = true
-                }
-
-                if (sharedPreferenceVM.isUserLoggedIn()) {
-                SettingItem(
+                    painter = painterResource(id = R.drawable.ic_contacts),
                     title = "Add emergency contact",
                     subtitle = "Send a notification to a parent or relative"
                 ) {
                     navController.navigate(NavigationRoute.CONTACTNUMBERSLISTCREEN.path)
                 }
             }
+
+            // Logout or Login
+            SettingItem(
+                painter = if (sharedPreferenceVM.isUserLoggedIn()) painterResource(id = R.drawable.ic_logout) else painterResource(id = R.drawable.ic_login),
+                title = if (sharedPreferenceVM.isUserLoggedIn()) "Log out" else "Login",
+                subtitle = null
+            ) {
                 if (sharedPreferenceVM.isUserLoggedIn()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                            .clickable {
-                                LogoutDialog=true
-                            }
-                    ) {
-                        Text(text = "Log out", style = MaterialTheme.typography.bodyLarge.copy(color = Color.White))
-
-                    }
-            }else{
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                            .clickable {
-                                navController.navigate(NavigationRoute.LOGINHOME.path)
-                            }
-                    ) {
-                        Text(text = "Login", style = MaterialTheme.typography.bodyLarge.copy(color = Color.White))
-
-                    }
+                    logoutDialog = true
+                } else {
+                    navController.navigate(NavigationRoute.LOGINHOME.path)
                 }
-
-
             }
+        }
 
+        // Dialogs
+        if (showDistanceDialog) {
+            ShowDistanceDialog(
+                selectedSound = selectedUnit,
+                onDismiss = { showDistanceDialog = false },
+                onSoundSelect = {
+                    selectedUnit = it
+                    addSettingsViewModel.updateUnit(it)
+                    showDistanceDialog = false
+                }
+            )
+        }
 
-            if (showDistanceDialog) {
-                ShowDistanceDialog(
-                    selectedSound = selectedUnit,
-                    onDismiss = { showDistanceDialog = false },
-                    onSoundSelect = {
-                        selectedUnit = it
-                        addSettingsViewModel.updateUnit(it)
-                        showDistanceDialog = false
-                    }
-                )
-            }
+        if (showLocationUpdateIntervalDialog) {
+            ShowLocationUpdateIntervalDialog(
+                selectedSound = selectedLocationUpdateInterval,
+                onDismiss = { showLocationUpdateIntervalDialog = false },
+                onSoundSelect = {
+                    selectedLocationUpdateInterval = it
+                    addSettingsViewModel.updateLocationUpdateInterval(it)
+                    showLocationUpdateIntervalDialog = false
+                }
+            )
+        }
 
-            if (showLocationUpdateIntervalDialog) {
-                ShowLocationUpdateIntervalDialog(
-                    selectedSound = selectedLocationUpdateInterval,
-                    onDismiss = { showLocationUpdateIntervalDialog = false },
-                    onSoundSelect = {
-                        selectedLocationUpdateInterval = it
-                        addSettingsViewModel.updateLocationUpdateInterval(it)
-                        showLocationUpdateIntervalDialog = false
-                    }
-                )
-            }
+        if (logoutDialog) {
+            LogoutDialog(
+                onDismiss = { logoutDialog = false },
+                onConfirmLogout = {
+                    addSettingsViewModel.callLogout("eq.${sharedPreferenceVM.getUserId()}")
+                    logoutDialog = false
+                }
+            )
+        }
 
-            if (LogoutDialog) {
-                LogoutDialog(
-                    onDismiss = { LogoutDialog = false },
-                    onConfirmLogout = {
-                        addSettingsViewModel.appLogout()
-                        LogoutDialog = false
-                    }
-                )
-            }
-
-            if (showDialog) {
-                GeoAlarmDialog(
-                    entryValue = entryDialog,
-                    exitValue = exitDialog,
-                    maxValue = maxDialog,
-                    onEntryChange = { entryDialog = it },
-                    onExitChange = { exitDialog = it },
-                    onMaxChange = { maxDialog = it },
-                    onDismiss = { showDialog = false },
-                    onConfirm = { entryVal, exitVal, maxVal ->
-                        entry = entryVal
-                        exit = exitVal
-                        max = maxVal
-
-
-                        addSettingsViewModel.updateEntryRadius(entryVal)
-                        addSettingsViewModel.updateExitRadius(exitVal)
-                        addSettingsViewModel.updateMaximumRadius(maxVal)
-                        showDialog = false
-                    }
-                )
-            }
+        if (showDialog) {
+            GeoAlarmDialog(
+                entryValue = entryDialog,
+                exitValue = exitDialog,
+                maxValue = maxDialog,
+                onEntryChange = { entryDialog = it },
+                onExitChange = { exitDialog = it },
+                onMaxChange = { maxDialog = it },
+                onDismiss = { showDialog = false },
+                onConfirm = { entryVal, exitVal, maxVal ->
+                    entry = entryVal
+                    exit = exitVal
+                    max = maxVal
+                    addSettingsViewModel.updateEntryRadius(entryVal)
+                    addSettingsViewModel.updateExitRadius(exitVal)
+                    addSettingsViewModel.updateMaximumRadius(maxVal)
+                    showDialog = false
+                }
+            )
         }
     }
 }
 
-
-
 @Composable
-fun SettingItem(title: String, subtitle: String? = null, enabled: Boolean = true, onClick: (() -> Unit)? = null) {
-    Column(
+fun SettingItem(
+    painter: Painter,
+    title: String,
+    subtitle: String? = null,
+    onClick: (() -> Unit)? = null
+) {
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .alpha(if (enabled) 1f else 0.5f)
-            .clickable { onClick?.invoke() }
+            .padding(vertical = 6.dp)
+            .clickable { onClick?.invoke() },
+        colors = CardDefaults.cardColors(containerColor = Hex222227),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
-        Text(text = title, style = MaterialTheme.typography.bodyLarge.copy(color = Color.White))
-        if (subtitle != null) {
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall.copy(color = Hexa0a0a0)
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painter,
+                contentDescription = null,
+                tint = HexFFFFFF,
+                modifier = Modifier.size(24.dp)
             )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(text = title, color = Color.White, fontSize = 16.sp)
+                subtitle?.let {
+                    Text(text = it, color = Hexa0a0a0, fontSize = 13.sp)
+                }
+            }
         }
     }
 }
@@ -333,14 +367,21 @@ fun ShowDistanceDialog(
     onDismiss: () -> Unit,
     onSoundSelect: (String) -> Unit
 ) {
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Show Distance") },
+        containerColor = Color(0xFF222227), // Background color
+        title = {
+            Text(
+                text = "Show Distance",
+                color = Color.White
+            )
+        },
         text = {
             Column {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                val distance = listOf("Meters/Kilometers", "Kilometers/Mile","Yard/Mile","Foot/Meters")
+                val distance = listOf("Meters/Kilometers", "Kilometers/Mile", "Yard/Mile", "Foot/Meters")
 
                 distance.forEach { sound ->
                     Row(
@@ -355,20 +396,25 @@ fun ShowDistanceDialog(
                     ) {
                         RadioButton(
                             selected = selectedSound == sound,
-                            onClick = { onSoundSelect(sound) }
+                            onClick = { onSoundSelect(sound) },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = Color.White,
+                                unselectedColor = Color.White
+                            )
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = sound)
+                        Text(text = sound, color = Color.White)
                     }
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text("Close", color = Color.White)
             }
         }
     )
+
 }
 
 @Composable
@@ -377,9 +423,16 @@ fun ShowLocationUpdateIntervalDialog(
     onDismiss: () -> Unit,
     onSoundSelect: (String) -> Unit
 ) {
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Location Update Interval") },
+        containerColor = Color(0xFF222227),
+        title = {
+            Text(
+                "Location Update Interval",
+                color = Color.White
+            )
+        },
         text = {
             Column {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -398,20 +451,25 @@ fun ShowLocationUpdateIntervalDialog(
                     ) {
                         RadioButton(
                             selected = selectedSound == sound,
-                            onClick = { onSoundSelect(sound) }
+                            onClick = { onSoundSelect(sound) },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = Color.White,
+                                unselectedColor = Color.White
+                            )
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = sound)
+                        Text(text = sound, color = Color.White)
                     }
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text("Close", color = Color.White)
             }
         }
     )
+
 }
 
 
@@ -422,19 +480,31 @@ fun LogoutDialog(
 )   {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = "Logout") },
-        text = { Text(text = "Are you sure you want to logout?") },
+        containerColor = Color(0xFF222227),
+        title = {
+            Text(
+                text = "Logout",
+                color = Color.White
+            )
+        },
+        text = {
+            Text(
+                text = "Are you sure you want to logout?",
+                color = Color.White
+            )
+        },
         confirmButton = {
             TextButton(onClick = onConfirmLogout) {
-                Text("Yes")
+                Text("Yes", color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("Cancel", color = Color.White)
             }
         }
     )
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -457,50 +527,56 @@ fun GeoAlarmDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Default Geo Alarm Perimeter",
-                style = MaterialTheme.typography.titleMedium
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-
-                // ENTRY RADIUS
-                Text("Alarm on area entry")
-                LabeledTextField(value = entryValue, onValueChange = onEntryChange)
-
-                // EXIT RADIUS
-                Text("Alarm on area exit")
-                LabeledTextField(value = exitValue, onValueChange = onExitChange)
-
-                // MAX RADIUS
-                Text("Maximal perimeter value")
-                LabeledTextField(value = maxValue, onValueChange = onMaxChange)
-            }
-        },
         confirmButton = {
             TextButton(
                 onClick = {
                     if (isFormValid) {
-                        onConfirm(
-                            entryValue,
-                            exitValue,
-                            maxValue
-                        )
+                        onConfirm(entryValue, exitValue, maxValue)
                     }
                 },
                 enabled = isFormValid
             ) {
-                Text("OK")
+                Text("OK", color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL")
+                Text("CANCEL", color = Color.White)
             }
-        }
+        },
+        title = {
+            Text(
+                text = "Alarm Perimeter",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White
+            )
+        },
+        text = {
+            Column() {
+
+                Text("Alarm on area entry", color = Color.White)
+                Spacer(modifier = Modifier.height(6.dp))
+
+                LabeledTextField(value = entryValue, onValueChange = onEntryChange)
+                Spacer(modifier = Modifier.height(30.dp))
+
+
+
+                Text("Alarm on area exit", color = Color.White)
+                LabeledTextField(value = exitValue, onValueChange = onExitChange)
+
+                Spacer(modifier = Modifier.height(30.dp))
+
+
+                Text("Maximal perimeter value", color = Color.White)
+                Spacer(modifier = Modifier.height(6.dp))
+
+                LabeledTextField(value = maxValue, onValueChange = onMaxChange)
+            }
+        },
+        containerColor = Color(0xFF222227)
     )
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -513,24 +589,39 @@ fun LabeledTextField(
         verticalAlignment = Alignment.Bottom,
         modifier = Modifier.wrapContentWidth()
     ) {
-        TextField(
+        BasicTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            colors = TextFieldDefaults.textFieldColors(
-                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                unfocusedIndicatorColor = Color.Gray,
-                disabledIndicatorColor = Color.Transparent,
-                containerColor = Color.Transparent
-            ),
-            modifier = Modifier.defaultMinSize(minWidth = 10.dp)
+            textStyle = LocalTextStyle.current.copy(color = Color.White),
+            cursorBrush = SolidColor(Color.White),
+            modifier = Modifier
+                .defaultMinSize(minWidth = 10.dp)
+                .drawBehind {
+                    val strokeWidth = 1.dp.toPx()
+                    val y = size.height - strokeWidth / 2
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = strokeWidth
+                    )
+                },
+            decorationBox = { innerTextField ->
+                Box(Modifier.padding(vertical = 8.dp)) {
+                    innerTextField()
+                }
+            }
         )
+
         Text(
             text = "M",
             style = MaterialTheme.typography.bodyLarge,
+            color = Color.White,
             modifier = Modifier.padding(bottom = 8.dp)
         )
+
     }
 }
 

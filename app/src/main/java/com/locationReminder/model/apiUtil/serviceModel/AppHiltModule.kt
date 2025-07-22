@@ -28,8 +28,7 @@ class AppHiltModule {
     @Provides
     @Named("LOCATION_REMINDER_API_LINK")
     @Singleton
-    fun providerConnectedAccountApiLink(): String = "https://romvveulgodfpbwxjmhy.supabase.co/rest/v1/"
-
+    fun providerConnectedAccountApiLink(): String = "https://romvveulgodfpbwxjmhy.supabase.co/"
 
     @Provides
     @Named("LOCATION_REMINDER_CONTEXT")

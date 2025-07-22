@@ -2,14 +2,12 @@ package com.locationReminder
 
 import android.Manifest
 import android.app.AlertDialog
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.provider.Telephony
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -21,10 +19,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
@@ -49,31 +45,27 @@ import androidx.core.net.toUri
 class MainActivity : ComponentActivity() {
 
     private val sharedPreferenceVM: SharedPreferenceVM by viewModels()
-    @Inject
-    lateinit var contactDAO: ContactDAO
-    @Inject
-    lateinit var locationDao: LocationDAO
+    @Inject lateinit var contactDAO: ContactDAO
+    @Inject lateinit var locationDao: LocationDAO
     private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var backgroundLocationLauncher: ActivityResultLauncher<String>
     private lateinit var locationSettingsLauncher: ActivityResultLauncher<Intent>
     private val addImportedCategoryNameViewModel: AddImportedCategoryNameViewModel by viewModels()
     private var haveImportedList = false
 
-
     private fun startLocationService() {
+        val serviceIntent = Intent(this, LocationService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(Intent(this, LocationService::class.java))
+            startForegroundService(serviceIntent)
         } else {
-            startService(Intent(this, LocationService::class.java))
+            startService(serviceIntent)
         }
     }
-
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-       handleDeepLink(intent)
+        handleDeepLink(intent)
 
         val entryPoint = EntryPointAccessors.fromApplication(
             this.applicationContext,
@@ -98,20 +90,14 @@ class MainActivity : ComponentActivity() {
 
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
 
-
-
-
-
-
         permissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
             val locationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
             val notificationsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 permissions[Manifest.permission.POST_NOTIFICATIONS] == true
-            } else {
-                true
-            }
+            } else true
+
             if (locationGranted && notificationsGranted) {
                 if (isLocationEnabled()) {
                     checkBackgroundLocationManually()
@@ -122,23 +108,15 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             backgroundLocationLauncher = registerForActivityResult(
                 ActivityResultContracts.RequestPermission()
-            ) { isGranted ->
-                if (isGranted) {
-                    Toast.makeText(this, "Background location granted", Toast.LENGTH_SHORT).show()
-                    checkOverlayPermission()
-                } else {
-                    Toast.makeText(this, "Background location denied", Toast.LENGTH_SHORT).show()
-                    checkOverlayPermission()
-                }
+            ) {
+                checkOverlayPermission()
             }
         }
 
         requestAllPermissions()
-        ensureDefaultSmsApp(this)
     }
 
     private fun isLocationEnabled(): Boolean {
@@ -152,17 +130,14 @@ class MainActivity : ComponentActivity() {
         locationSettingsLauncher.launch(intent)
     }
 
-
     private fun launchComposeUI() {
         setContent {
             startLocationService()
             ComposeBaseFunction()
-
         }
     }
 
     private fun handleDeepLink(intent: Intent?) {
-
         if (sharedPreferenceVM.isUserLoggedIn()) {
             val data = intent?.data
             if (data != null && data.scheme == "myapp" && data.host == "imported_marker") {
@@ -170,39 +145,36 @@ class MainActivity : ComponentActivity() {
                 val userId = data.getQueryParameter("UID")
                 val categoryId = data.getQueryParameter("CID")
                 val userName = data.getQueryParameter("UN")
+
                 if (userId == sharedPreferenceVM.getUserId()) {
                     Toast.makeText(this, "Import other user detail", Toast.LENGTH_SHORT).show()
                     intent.data = null
                     return
                 }
 
-                if (categoryFolderName != null && userId != null&& categoryId != null&& userName != null) {
+                if (categoryFolderName != null && userId != null && categoryId != null && userName != null) {
                     lifecycleScope.launch {
                         val existingRecord = addImportedCategoryNameViewModel
                             .isCategoryAlreadyExists(categoryFolderName, userId)
+
                         if (existingRecord == null) {
                             val newRecord = ImportedCategoryNameResponseModel(
                                 id = categoryId.toInt(),
                                 categoryName = categoryFolderName,
                                 userId = userId,
                                 firstTimeImport = true,
-                                showImport=false,
-                                userName=userName
+                                showImport = false,
+                                userName = userName
                             )
                             addImportedCategoryNameViewModel.insertRecord(newRecord)
-
                         } else {
                             val updatedRecord = existingRecord.copy(firstTimeImport = true)
                             addImportedCategoryNameViewModel.updateRecord(updatedRecord)
                         }
-
                         haveImportedList = true
-
                     }
                     intent.data = null
-
                 }
-
             }
         }
     }
@@ -211,88 +183,66 @@ class MainActivity : ComponentActivity() {
     private fun ComposeBaseFunction() {
         val navController = rememberNavController()
         val buttonsVisible = remember { mutableStateOf(false) }
-        var isBottomBarVisible by remember { mutableStateOf(false) }
-        var navGraphInitialized by remember { mutableStateOf(false) }
 
-        val startDestination = if (haveImportedList) {
-            sharedPreferenceVM.setImportList(true)
-            NavigationRoute.FOLLOWSUPSCREEN.path
-        } else {
-            sharedPreferenceVM.setImportList(false)
-            NavigationRoute.HOMESCREEN.path
-        }
+        val isNewUser = sharedPreferenceVM.getNewUser()
+        val hasImportedList = haveImportedList
 
-
-        LaunchedEffect(navGraphInitialized, haveImportedList) {
-            if (navGraphInitialized) {
-                navController.navigate(startDestination) {
-                    popUpTo(0) { inclusive = true }
-                }
-                isBottomBarVisible = true
+        val startDestination = when {
+            isNewUser -> NavigationRoute.SPLASHSCREEN.path
+            hasImportedList -> {
+                sharedPreferenceVM.setImportList(true)
+                NavigationRoute.FOLLOWSUPSCREEN.path
+            }
+            else -> {
+                sharedPreferenceVM.setImportList(false)
+                NavigationRoute.HOMESCREEN.path
             }
         }
 
         LaunchedEffect(Unit) {
             navController.addOnDestinationChangedListener { _, destination, _ ->
-                val route = destination.route
                 buttonsVisible.value = listOf(
                     NavigationRoute.HOMESCREEN.path,
                     NavigationRoute.LEADSSCREEN.path,
                     NavigationRoute.FOLLOWSUPSCREEN.path,
                     NavigationRoute.SETTINGSSCREEN.path
-                ).contains(route)
-
+                ).contains(destination.route)
             }
         }
+
         Scaffold(
             bottomBar = {
                 if (buttonsVisible.value) {
-
-                        BottomBar(
-                            navController = navController,
-                            state = buttonsVisible,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                    BottomBar(
+                        navController = navController,
+                        state = buttonsVisible,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
-        ) { padding ->
-            NavigationGraph(navController)
-            LaunchedEffect(Unit) {
-                navGraphInitialized = true
-            }
+        ) {
+            NavigationGraph(
+                navHostController = navController,
+                startDestination = startDestination
+            )
         }
-
-
     }
-
 
     private fun requestAllPermissions() {
         val mandatoryPermissions = mutableListOf<String>()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
         ) {
             mandatoryPermissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
         ) {
             mandatoryPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
         }
-
-
-        /*    if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                mandatoryPermissions.add(Manifest.permission.SEND_SMS)
-            }*/
-
 
         if (mandatoryPermissions.isNotEmpty()) {
             permissionLauncher.launch(mandatoryPermissions.toTypedArray())
@@ -306,11 +256,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
     private fun checkBackgroundLocationManually() {
         if (!isBackgroundLocationGranted()) {
             promptForBackgroundLocationPermission()
-        }else {
+        } else {
             checkOverlayPermission()
         }
     }
@@ -320,8 +269,7 @@ class MainActivity : ComponentActivity() {
             ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_BACKGROUND_LOCATION
-            ) ==
-                    PackageManager.PERMISSION_GRANTED
+            ) == PackageManager.PERMISSION_GRANTED
         } else true
     }
 
@@ -345,13 +293,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
     private fun checkOverlayPermission() {
         if (!Settings.canDrawOverlays(this)) {
             showOverlayPermissionDialog()
         }
     }
-
 
     private fun showOverlayPermissionDialog() {
         AlertDialog.Builder(this)
@@ -367,21 +313,10 @@ class MainActivity : ComponentActivity() {
             .setNegativeButton("Cancel", null)
             .show()
     }
-
-
-
 }
 
-fun ensureDefaultSmsApp(context: Context) {
-    val myPackageName = context.packageName
-    val defaultSmsPackage = Telephony.Sms.getDefaultSmsPackage(context)
 
-    if (defaultSmsPackage != myPackageName) {
-        val intent = Intent(Telephony.Sms.Intents.ACTION_CHANGE_DEFAULT)
-        intent.putExtra(Telephony.Sms.Intents.EXTRA_PACKAGE_NAME, myPackageName)
-        context.startActivity(intent)
-    }
-}
+
 
 
 

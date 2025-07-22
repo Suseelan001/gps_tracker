@@ -139,11 +139,5 @@ class AlarmActivity : ComponentActivity() {
             animateArrows()
         }, 1200)
     }
-
-
-
-
-
-
 }
 

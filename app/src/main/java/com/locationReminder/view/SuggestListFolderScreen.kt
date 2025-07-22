@@ -19,11 +19,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -37,6 +42,7 @@ import com.locationReminder.R
 import com.locationReminder.view.appNavigation.NavigationRoute
 import com.locationReminder.viewModel.SharedPreferenceVM
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -50,77 +56,76 @@ fun SuggestListFolderScreen(
         val rawAreaName = sharedPreferenceVM.getArea()
         val areaNameFilter = "ilike.${rawAreaName.lowercase()}"
         val categoryNameFilter = "ilike.%%"
-
-        suggestionsViewModel.getAreaId(areaNameFilter,categoryNameFilter)
+        suggestionsViewModel.getAreaId(areaNameFilter, categoryNameFilter)
     }
 
     val getAccountList by suggestionsViewModel.suggestionsCategoryList.observeAsState(emptyList())
     val isLoading by suggestionsViewModel.loading.observeAsState(true)
-    val focusManager = LocalFocusManager.current
-    val topBarBackgroundColor = Hex222227
-    val topBarTextColor = Color.White
-
-    //search
     val searchQuery = rememberSaveable { mutableStateOf("") }
+    val isFocused = rememberSaveable { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+
+    val collapsedTopAppBarState = rememberTopAppBarState(
+        initialHeightOffsetLimit = -Float.MAX_VALUE,
+        initialHeightOffset = 0f,
+        initialContentOffset = 0f
+    )
+
+    val defaultTopAppBarState = rememberTopAppBarState()
+
+    val scrollBehavior = if (isFocused.value) {
+        TopAppBarDefaults.enterAlwaysScrollBehavior(collapsedTopAppBarState)
+    } else {
+        TopAppBarDefaults.enterAlwaysScrollBehavior(defaultTopAppBarState)
+    }
+
+
+
+
+    LaunchedEffect(isFocused.value) {
+        if (isFocused.value) {
+            snapshotFlow { collapsedTopAppBarState.heightOffsetLimit }
+                .first { it != 0f && it != Float.NEGATIVE_INFINITY }
+            collapsedTopAppBarState.heightOffset = collapsedTopAppBarState.heightOffsetLimit
+        }
+    }
+
 
 
 
     Scaffold(
         modifier = Modifier
+            .nestedScroll(scrollBehavior.nestedScrollConnection)
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }) {
                 focusManager.clearFocus()
             },
+
+
         topBar = {
-            LargeTopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-
-                    ) {
-                        Text(
-                            text ="List of Suggestions",
-                            color = Color.White
-                        )
-
-                    }
-                },
-
-                colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = topBarBackgroundColor,
-                    scrolledContainerColor = topBarBackgroundColor,
-                    titleContentColor = topBarTextColor,
-                    navigationIconContentColor = topBarTextColor,
-                    actionIconContentColor = topBarTextColor
-                ))
-
+            LibraryTopBar(scrollBehavior)
         }
+
+
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .background(Hex222227)
-                .padding(bottom = 15.dp)
+                .padding(top = paddingValues.calculateTopPadding())
+                .padding(bottom = 50.dp)
+
 
         ) {
 
 
-
             var clickedId by remember { mutableStateOf("") }
-           // val isLoading = remember { mutableStateOf(false) }
 
             val successMessage by suggestionsViewModel.successMessage.observeAsState("")
 
             if (successMessage == "Record Imported") {
-               // isLoading.value = false
-
                 clickedId = ""
-
                 suggestionsViewModel.clearSuccessMessage()
             }
 
@@ -133,13 +138,11 @@ fun SuggestListFolderScreen(
                     val areaNameFilter = "ilike.${rawAreaName.lowercase()}"
                     val searchKey = searchQuery.value.trim().lowercase()
                     val categoryNameFilter = "ilike.%$searchKey%"
-                    suggestionsViewModel.getAreaId(areaNameFilter,categoryNameFilter)
+                    suggestionsViewModel.getAreaId(areaNameFilter, categoryNameFilter)
                 }
             }
 
             Column(modifier = Modifier.fillMaxSize()) {
-
-                // 🔍 Search Bar - Always at top
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -154,6 +157,7 @@ fun SuggestListFolderScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Box(modifier = Modifier.weight(1f)) {
+
                                 TextField(
                                     value = searchQuery.value,
                                     onValueChange = {
@@ -163,7 +167,10 @@ fun SuggestListFolderScreen(
                                         Text("Search here", color = Color.LightGray)
                                     },
                                     singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier.fillMaxWidth()
+                                        .onFocusChanged { focusState ->
+                                            isFocused.value = focusState.isFocused
+                                        },
                                     colors = TextFieldDefaults.colors(
                                         focusedTextColor = Color.White,
                                         unfocusedTextColor = Color.White,
@@ -183,7 +190,7 @@ fun SuggestListFolderScreen(
                                         }
                                     },
                                     trailingIcon = {
-                                  if (searchQuery.value.isNotEmpty()) {
+                                        if (searchQuery.value.isNotEmpty()) {
                                             IconButton(onClick = {
                                                 searchQuery.value = ""
                                             }) {
@@ -306,7 +313,7 @@ fun SuggestListFolderScreen(
             }
 
 
-         }
+        }
 
     }
 
@@ -314,6 +321,34 @@ fun SuggestListFolderScreen(
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LibraryTopBar(scrollBehavior: TopAppBarScrollBehavior) =
+    LargeTopAppBar(
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+
+            ) {
+                Text(
+                    text = "List of Suggestions",
+                    color = Color.White
+                )
+
+            }
+        },
+        colors = TopAppBarDefaults.largeTopAppBarColors(
+            containerColor = Hex222227,
+            scrolledContainerColor = Hex222227,
+            titleContentColor = Color.White,
+            navigationIconContentColor = Color.White,
+            actionIconContentColor = Color.White
+        ),
+        scrollBehavior = scrollBehavior
+    )
 
 
 

@@ -134,7 +134,7 @@ fun OnEntryListScreen(
                          currentLatitude.doubleValue = it.latitude
                          currentLongitude.doubleValue = it.longitude
                          val areaName=getArea(context, it.latitude, it.longitude)
-                         sharedPreferenceVM.setArea("Coimbatore")
+                         sharedPreferenceVM.setArea(areaName)
                      }
                  }
              }
@@ -219,8 +219,11 @@ fun OnEntryListScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .background(Hex222227)
+                .padding(top = paddingValues.calculateTopPadding())
+                .padding(bottom = 50.dp)
+
+
         ){
         if (entryList.isEmpty()) {
                 Column(
@@ -333,10 +336,6 @@ fun OnEntryListScreen(
         }
     }
   }
-
-
-
-
 fun getArea(context: Context, latitude: Double, longitude: Double): String {
     val geocoder = Geocoder(context, Locale.getDefault())
     return try {
@@ -366,7 +365,6 @@ fun getArea(context: Context, latitude: Double, longitude: Double): String {
         ""
     }
 }
-
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

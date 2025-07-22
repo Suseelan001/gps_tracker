@@ -239,14 +239,16 @@ if (successMessage=="Record updated"){
 
         }
     ) { paddingValues ->
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .background(Hex222227)
-                .padding(bottom = 15.dp)
+                .padding(top = paddingValues.calculateTopPadding())
+                .padding(bottom = 50.dp)
 
-        ) {
+
+        ){
             if (sharedPreferenceVM.isUserLoggedIn() == false) {
                 Box(
                     modifier = Modifier

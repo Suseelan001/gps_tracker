@@ -51,6 +51,14 @@ var RobotoRegularWithHexHexeef26714sp: TextStyle = TextStyle(
     color = Hexeef267
 )
 
+var RobotoRegularWithHexHexeef26718sp: TextStyle = TextStyle(
+    fontFamily = FontFamily(Font(R.font.inter_regular)),
+    fontWeight = FontWeight.Normal,
+    fontSize = 18.sp,
+    letterSpacing = TextUnit.Unspecified,
+    color = Hexeef267
+)
+
 
 var RobotoRegularWithHexFFFFFF14sp: TextStyle = TextStyle(
     fontFamily = FontFamily(Font(R.font.inter_regular)),
@@ -61,10 +69,12 @@ var RobotoRegularWithHexFFFFFF14sp: TextStyle = TextStyle(
 )
 
 
-var InternMediumWithHex3b7ded14sp: TextStyle = TextStyle(
+var InternMediumWithHexa0a0a014sp: TextStyle = TextStyle(
     fontFamily = FontFamily(Font(R.font.inter_medium)),
     fontWeight = FontWeight.Normal,
     fontSize = 14.sp,
     letterSpacing = TextUnit.Unspecified,
-    color = Hex3b7ded
+    color = Hexa0a0a0
 )
+
+

@@ -165,9 +165,12 @@ fun MarkerListBaseScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFF222227))
-        ) {
+                .background(Hex222227)
+                .padding(top = paddingValues.calculateTopPadding())
+                .padding(bottom = 50.dp)
+
+
+        ){
             if (!sharedPreferenceVM.isUserLoggedIn()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

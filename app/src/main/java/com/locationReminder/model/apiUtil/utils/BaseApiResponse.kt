@@ -16,38 +16,36 @@ open class BaseApiResponse {
             }
 
             var message = "Something went wrong!"
+
             response.errorBody()?.let {
                 val data = JSONObject(it.string())
-                if (data.has("code") && data.getString("code") == "23505") {
-                    message = "Record already exist"
+
+                when (data.optString("code")) {
+                    "23505" -> message = "Record already exists"
+                    "45001" -> message = "Email not found"
+                    "45002" -> message = "Invalid password"
+                    "45003" -> message = "Email already registered"
                 }
 
-                if (data.has("error_msg")) {
-                    message = data.getString("error_msg")
+                message = data.optString("error_msg", message)
+                message = data.optString("message", message)
+
+                if (data.has("result") && data.get("result") is JSONObject) {
+                    val result = data.getJSONObject("result")
+                    message = result.optString("error_msg", message)
                 }
-                if (data.has("result")) {
-                    if (data.get("result") is JSONObject) {
-                        val result = data.getJSONObject("result")
-                        if (result.has("error_msg")) {
-                            message = result.getString("error_msg")
-                        }
-                    }
+
+                if (data.has("data") && data.get("data") is JSONObject) {
+                    val result = data.getJSONObject("data")
+                    message = result.optString("error_msg", message)
                 }
-                if (data.has("data")) {
-                    if (data.get("data") is JSONObject) {
-                        val result = data.getJSONObject("data")
-                        if (result.has("error_msg")) {
-                            message = result.getString("error_msg")
-                        }
-                    }
-                }
-                if (data.has("statusCode")) {
-                    val statusCode = data.getInt("statusCode")
-                    if (statusCode == 400) {
-                        message = data.optString("message", "An error occurred.")
-                    }
+
+                // HTTP status code based override (optional)
+                if (data.optInt("statusCode") == 400) {
+                    message = data.optString("message", message)
                 }
             }
+
             error(message)
         } catch (e: Exception) {
             error(e.message ?: e.toString())

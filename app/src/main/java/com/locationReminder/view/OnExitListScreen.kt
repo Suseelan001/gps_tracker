@@ -207,8 +207,10 @@ fun OnExitListScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .background(Hex222227)
+                .padding(top = paddingValues.calculateTopPadding())
+                .padding(bottom = 50.dp)
+
 
         ) {
             if (exitList.isEmpty()) {

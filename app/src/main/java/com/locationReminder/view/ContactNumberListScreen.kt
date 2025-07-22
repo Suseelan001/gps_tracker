@@ -131,8 +131,11 @@ fun ContactNumberListScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .background(Hex222227)
+                .padding(top = paddingValues.calculateTopPadding())
+                .padding(bottom = 50.dp)
+
+
         ) {
             LazyColumn(
                 state = listState,
@@ -156,16 +159,7 @@ fun ContactNumberListScreen(
                     )
                 }
 
-                if (allRecords.isNotEmpty()){
-                    item {
-                        Text("SMS will be sent automatically to emergency contacts when the user exits the predefined location",
-                            color = HexFFFFFF,
-                            style = RobotoMediumWithHexFFFFFF18sp,
-                            modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp))
-                    }
-                }
+
 
 
             }
@@ -191,7 +185,7 @@ fun ContactCard(
                 onLongClick = onLongClick
             ),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) Color(0xFF2E7D32) else Hex36374a
+            containerColor = if (isSelected) Hexeef267 else Hex36374a
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(12.dp)
@@ -202,7 +196,6 @@ fun ContactCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Optional circle avatar or initials
             Box(
                 modifier = Modifier
                     .size(48.dp)

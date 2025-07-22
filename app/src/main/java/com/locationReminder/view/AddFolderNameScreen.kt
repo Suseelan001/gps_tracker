@@ -18,12 +18,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.locationReminder.R
 import com.locationReminder.ui.theme.Hex222227
-import com.locationReminder.ui.theme.Hex3b7ded
+import com.locationReminder.ui.theme.Hexeef267
 import com.locationReminder.ui.theme.InternBoldWithHex31394f18sp
 import com.locationReminder.viewModel.AddFolderNameViewModel
 import com.locationReminder.viewModel.AddImportedCategoryNameViewModel
@@ -134,15 +132,7 @@ fun AddFolderNameScreen(
                 CustomTextFieldWithIcon(
                     value = folderName,
                     onValueChange = { folderName = it },
-                    hint = "Enter Folder Name",
-                    leadingIcon = {
-                        Icon(
-                            painter = painterResource(id = R.drawable.folder),
-                            contentDescription = "Folder Icon",
-                            tint = Color.Gray,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                    hint = "Enter Folder Name"
                 )
 
 
@@ -154,7 +144,7 @@ fun AddFolderNameScreen(
                         .fillMaxWidth()
                         .padding(start = 24.dp, end = 24.dp),
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(Hex3b7ded),
+                    colors = ButtonDefaults.buttonColors(Hexeef267),
                     onClick = {
                         focusManager.clearFocus()
                         if (folderName.isEmpty()) {
@@ -186,7 +176,7 @@ fun AddFolderNameScreen(
 
                     },
                 ) {
-                    Text(text = "Save", style = InternBoldWithHex31394f18sp, color = Color.White)
+                    Text(text = "Save", style = InternBoldWithHex31394f18sp, color = Color.Black)
                 }
 
 

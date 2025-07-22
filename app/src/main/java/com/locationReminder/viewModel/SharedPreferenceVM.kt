@@ -37,8 +37,14 @@ class SharedPreferenceVM @Inject constructor(
     fun setImportList(value: Boolean) {
         mySharedPreference.setImportList(value)
     }
+    fun setNewUser(value: Boolean) {
+        mySharedPreference.setNewUser(value)
+    }
 
 
+    fun getNewUser(): Boolean {
+        return   mySharedPreference.getNewUser() == true
+    }
 
 
 }

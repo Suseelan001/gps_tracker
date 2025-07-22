@@ -221,9 +221,10 @@ fun ImportedMarkerListScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .background(Hex222227)
-                .padding(bottom = 10.dp)
+                .padding(top = paddingValues.calculateTopPadding())
+                .padding(bottom = 50.dp)
+
 
         ) {
             if (sharedPreferenceVM.isUserLoggedIn() == false) {

@@ -38,6 +38,15 @@ class BaseNetworkSyncClass @Inject constructor(
             }
         }
     }
+
+
+    suspend fun callLogout(id: String,map: Map<String, Any>): NetworkResult<List<UserDetailResponseModel>> {
+        return withContext(Dispatchers.Default) {
+            safeApiCall {
+                apiService.callLogout(id,map)
+            }
+        }
+    }
     suspend fun updateUserLogin(mail: String,map: Map<String, Any>): NetworkResult<ResponseBody> {
         return withContext(Dispatchers.Default) {
             safeApiCall {

@@ -36,11 +36,11 @@ import androidx.navigation.NavHostController
 import com.locationReminder.reponseModel.ContactDetail
 import com.locationReminder.reponseModel.ContactDetailLocal
 import com.locationReminder.ui.theme.Hex222227
+import com.locationReminder.ui.theme.Hexeef267
 import com.locationReminder.ui.theme.RobotoMediumWithHexFFFFFF18sp
 import com.locationReminder.ui.theme.RobotoRegularWithHexHex80808016sp
 import com.locationReminder.viewModel.AddContactViewModel
 import com.locationReminder.viewModel.AddLocationViewModel
-import com.locationReminder.viewModel.SharedPreferenceVM
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -48,7 +48,6 @@ import kotlinx.coroutines.delay
 fun AddContactNumberScreen(
     navController: NavHostController,
     viewModel: AddContactViewModel,
-    sharedPreferenceVM: SharedPreferenceVM,
     addLocationViewModel: AddLocationViewModel
 
 ) {
@@ -334,19 +333,31 @@ fun EditContact(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = "Add") },
-        text = { Text(text = "Send message to all these contacts") },
+        containerColor = Color(0xFF1A1A1D), // Updated dark background
+        title = {
+            Text(
+                text = "Add",
+                color = Color.White
+            )
+        },
+        text = {
+            Text(
+                text = "Send message to all these contacts",
+                color = Color.White
+            )
+        },
         confirmButton = {
             TextButton(onClick = onConfirmLogout) {
-                Text("Yes")
+                Text("Yes", color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("No")
+                Text("No", color = Color.White)
             }
         }
     )
+
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -365,7 +376,7 @@ fun ContactCard(
                 onLongClick = {}
             ),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) Color(0xFF2E7D32) else Color(0xFF36374A)
+            containerColor = if (isSelected) Hexeef267 else Color(0xFF36374A)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(12.dp)

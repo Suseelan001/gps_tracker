@@ -32,7 +32,6 @@ import com.locationReminder.view.SuggestListFolderScreen
 import com.locationReminder.view.SuggestMarkerListScreen
 import com.locationReminder.view.SuggestionsMapScreen
 import com.locationReminder.view.ViewAllSuggestionsMapScreen
-import com.locationReminder.viewModel.AdViewModel
 import com.locationReminder.viewModel.AddContactViewModel
 import com.locationReminder.viewModel.AddFolderNameViewModel
 import com.locationReminder.viewModel.AddImportedCategoryNameViewModel
@@ -42,10 +41,14 @@ import com.locationReminder.viewModel.SharedPreferenceVM
 import com.locationReminder.viewModel.SuggestionsViewModel
 
 @Composable
-fun NavigationGraph(navHostController: NavHostController) {
+
+fun NavigationGraph(
+    navHostController: NavHostController,
+    startDestination: String
+) {
     NavHost(
         navController = navHostController,
-        startDestination = NavigationRoute.HOMESCREEN.path,
+        startDestination =  startDestination,
         modifier = Modifier.fillMaxSize(),
         enterTransition = {
             slideIntoContainer(
@@ -75,8 +78,9 @@ fun NavigationGraph(navHostController: NavHostController) {
 
 
         composable(route = NavigationRoute.SPLASHSCREEN.path) {
+            val sharedPreferenceVM = hiltViewModel<SharedPreferenceVM>()
 
-            SplashScreen(navHostController)
+            SplashScreen(navHostController,sharedPreferenceVM)
         }
 
         composable(route = NavigationRoute.LOGINHOME.path) {
@@ -110,7 +114,6 @@ fun NavigationGraph(navHostController: NavHostController) {
         composable(route = NavigationRoute.HOMESCREEN.path) {
             val viewModeRef = hiltViewModel<AddLocationViewModel>()
             val sharedPreferenceVM = hiltViewModel<SharedPreferenceVM>()
-            val adViewModel = hiltViewModel<AdViewModel>()
             OnEntryListScreen(navHostController, viewModeRef,sharedPreferenceVM)
 
         }
@@ -209,7 +212,6 @@ fun NavigationGraph(navHostController: NavHostController) {
         composable(route = NavigationRoute.SETTINGSSCREEN.path) {
             val viewModeRef = hiltViewModel<AddSettingsViewModel>()
             val sharedPreferenceVM = hiltViewModel<SharedPreferenceVM>()
-            val adViewModel = hiltViewModel<AdViewModel>()
             SettingsScreen(navHostController, viewModeRef, sharedPreferenceVM)
 
         }
@@ -221,7 +223,6 @@ fun NavigationGraph(navHostController: NavHostController) {
             AddContactNumberScreen(
                 navHostController,
                 viewModeRef,
-                sharedPreferenceVM,
                 addLocationViewModel
             )
 
@@ -339,6 +340,8 @@ fun NavigationGraph(navHostController: NavHostController) {
             val loginVM = hiltViewModel<LoginVM>()
             ProfileScreen(navHostController, loginVM)
         }
+
+
     }
 }
 
